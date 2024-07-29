@@ -107,6 +107,10 @@ impl<'a> Scanner<'a> {
         }
     }
 
+    fn peak(&mut self) -> Option<char> {
+        self.chars.clone().next()
+    }
+
     /// Returns source text at `start..current`
     fn lexeme(&self) -> &str {
         &self.source[self.start..self.current]
@@ -136,10 +140,11 @@ impl<'a> Scanner<'a> {
                 ';' => self.add_token(TokenType::SemiColon, None),
                 '*' => self.add_token(TokenType::Star, None),
                 '=' => {
-                    if self.advance() == Some('=') {
-                        self.add_token(TokenType::EqualEqual, None)
+                    if self.peak() == Some('=') {
+                        self.advance();
+                        self.add_token(TokenType::EqualEqual, None);
                     } else {
-                        self.add_token(TokenType::Equal, None)
+                        self.add_token(TokenType::Equal, None);
                     }
                 }
                 '\n' => self.line += 1,
