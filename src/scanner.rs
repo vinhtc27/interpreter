@@ -1,9 +1,8 @@
 use std::fmt::Display;
 use std::str::Chars;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenType {
-    // Single character tokens
     LeftParen,
     RightParen,
     LeftBrace,
@@ -23,13 +22,7 @@ pub enum TokenType {
     Greater,
     GreaterEqual,
     Slash,
-    // One or two character tokens
-    //TODO:
-    // Literals
-    //TODO
-    // Keywords
-    //TODO
-    // End Of File
+    String,
     EOF,
 }
 
@@ -55,26 +48,18 @@ impl Display for TokenType {
             TokenType::Greater => write!(f, "GREATER"),
             TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
             TokenType::Slash => write!(f, "SLASH"),
+            TokenType::String => write!(f, "STRING"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
 }
 
-#[derive(Debug)]
-pub enum Literal {}
-
-impl Display for Literal {
-    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(())
-    }
-}
-
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
-    literal: Option<Literal>,
-    #[allow(dead_code)]
+    literal: Option<String>,
     line: usize,
 }
 
@@ -130,7 +115,13 @@ impl<'a> Scanner<'a> {
         &self.source[self.start..self.current]
     }
 
-    fn add_token(&mut self, token_type: TokenType, literal: Option<Literal>) {
+    fn add_token(&mut self, token_type: TokenType) {
+        let literal = if token_type == TokenType::String {
+            Some(self.source[self.start + 1..self.current - 1].to_string())
+        } else {
+            None
+        };
+
         self.tokens.push(Token {
             token_type,
             lexeme: self.lexeme().to_string(),
@@ -143,46 +134,46 @@ impl<'a> Scanner<'a> {
         while let Some(c) = self.advance() {
             self.start = self.current - c.len_utf8();
             match c {
-                '(' => self.add_token(TokenType::LeftParen, None),
-                ')' => self.add_token(TokenType::RightParen, None),
-                '{' => self.add_token(TokenType::LeftBrace, None),
-                '}' => self.add_token(TokenType::RightBrace, None),
-                ',' => self.add_token(TokenType::Comma, None),
-                '.' => self.add_token(TokenType::Dot, None),
-                '-' => self.add_token(TokenType::Minus, None),
-                '+' => self.add_token(TokenType::Plus, None),
-                ';' => self.add_token(TokenType::SemiColon, None),
-                '*' => self.add_token(TokenType::Star, None),
+                '(' => self.add_token(TokenType::LeftParen),
+                ')' => self.add_token(TokenType::RightParen),
+                '{' => self.add_token(TokenType::LeftBrace),
+                '}' => self.add_token(TokenType::RightBrace),
+                ',' => self.add_token(TokenType::Comma),
+                '.' => self.add_token(TokenType::Dot),
+                '-' => self.add_token(TokenType::Minus),
+                '+' => self.add_token(TokenType::Plus),
+                ';' => self.add_token(TokenType::SemiColon),
+                '*' => self.add_token(TokenType::Star),
                 '=' => {
                     if self.peak() == Some('=') {
                         self.advance();
-                        self.add_token(TokenType::EqualEqual, None);
+                        self.add_token(TokenType::EqualEqual);
                     } else {
-                        self.add_token(TokenType::Equal, None);
+                        self.add_token(TokenType::Equal);
                     }
                 }
                 '!' => {
                     if self.peak() == Some('=') {
                         self.advance();
-                        self.add_token(TokenType::BangEqual, None);
+                        self.add_token(TokenType::BangEqual);
                     } else {
-                        self.add_token(TokenType::Bang, None);
+                        self.add_token(TokenType::Bang);
                     }
                 }
                 '<' => {
                     if self.peak() == Some('=') {
                         self.advance();
-                        self.add_token(TokenType::LessEqual, None);
+                        self.add_token(TokenType::LessEqual);
                     } else {
-                        self.add_token(TokenType::Less, None);
+                        self.add_token(TokenType::Less);
                     }
                 }
                 '>' => {
                     if self.peak() == Some('=') {
                         self.advance();
-                        self.add_token(TokenType::GreaterEqual, None);
+                        self.add_token(TokenType::GreaterEqual);
                     } else {
-                        self.add_token(TokenType::Greater, None);
+                        self.add_token(TokenType::Greater);
                     }
                 }
                 '/' => {
@@ -192,8 +183,24 @@ impl<'a> Scanner<'a> {
                             self.advance();
                         }
                     } else {
-                        self.add_token(TokenType::Slash, None);
+                        self.add_token(TokenType::Slash);
                     }
+                }
+                '"' => {
+                    while self.peak() != Some('"') && self.peak().is_some() {
+                        if self.peak() == Some('\n') {
+                            self.line += 1;
+                        }
+                        self.advance();
+                    }
+
+                    if self.peak().is_none() {
+                        self.report.error(self.line, "Unterminated string");
+                        break;
+                    }
+
+                    self.advance();
+                    self.add_token(TokenType::String);
                 }
                 '\n' => self.line += 1,
                 c if c.is_whitespace() => {}
