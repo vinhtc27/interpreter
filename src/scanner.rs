@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::iter::Peekable;
 use std::str::Chars;
 
 #[derive(Debug, PartialEq)]
@@ -23,6 +24,7 @@ pub enum TokenType {
     GreaterEqual,
     Slash,
     String,
+    Number,
     EOF,
 }
 
@@ -49,7 +51,23 @@ impl Display for TokenType {
             TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
             TokenType::Slash => write!(f, "SLASH"),
             TokenType::String => write!(f, "STRING"),
+            TokenType::Number => write!(f, "NUMBER"),
             TokenType::EOF => write!(f, "EOF"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Literal {
+    String(String),
+    Number(f64),
+}
+
+impl Display for Literal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Literal::String(s) => write!(f, "{}", s),
+            Literal::Number(n) => write!(f, "{}", n),
         }
     }
 }
@@ -59,7 +77,7 @@ impl Display for TokenType {
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
-    literal: Option<String>,
+    literal: Option<Literal>,
     line: usize,
 }
 
@@ -75,7 +93,7 @@ impl Display for Token {
 
 pub struct Scanner<'a> {
     source: &'a str,
-    chars: Chars<'a>,
+    chars: Peekable<Chars<'a>>,
     tokens: Vec<Token>,
     start: usize,
     current: usize,
@@ -88,7 +106,7 @@ impl<'a> Scanner<'a> {
     pub fn new(source: &'a str) -> Self {
         Self {
             source,
-            chars: source.chars(),
+            chars: source.chars().peekable(),
             tokens: Vec::new(),
             start: 0,
             current: 0,
@@ -106,8 +124,8 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    fn peak(&mut self) -> Option<char> {
-        self.chars.clone().next()
+    fn peek(&mut self) -> Option<&char> {
+        self.chars.peek()
     }
 
     /// Returns source text at `start..current`
@@ -116,15 +134,19 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, token_type: TokenType) {
+        let lexeme = self.lexeme();
+
         let literal = if token_type == TokenType::String {
-            Some(self.source[self.start + 1..self.current - 1].to_string())
+            Some(Literal::String(lexeme[1..lexeme.len() - 1].to_string()))
+        } else if token_type == TokenType::Number {
+            Some(Literal::Number(lexeme.parse().unwrap()))
         } else {
             None
         };
 
         self.tokens.push(Token {
             token_type,
-            lexeme: self.lexeme().to_string(),
+            lexeme: lexeme.to_string(),
             literal,
             line: self.line,
         })
@@ -145,7 +167,7 @@ impl<'a> Scanner<'a> {
                 ';' => self.add_token(TokenType::SemiColon),
                 '*' => self.add_token(TokenType::Star),
                 '=' => {
-                    if self.peak() == Some('=') {
+                    if self.peek() == Some(&'=') {
                         self.advance();
                         self.add_token(TokenType::EqualEqual);
                     } else {
@@ -153,7 +175,7 @@ impl<'a> Scanner<'a> {
                     }
                 }
                 '!' => {
-                    if self.peak() == Some('=') {
+                    if self.peek() == Some(&'=') {
                         self.advance();
                         self.add_token(TokenType::BangEqual);
                     } else {
@@ -161,7 +183,7 @@ impl<'a> Scanner<'a> {
                     }
                 }
                 '<' => {
-                    if self.peak() == Some('=') {
+                    if self.peek() == Some(&'=') {
                         self.advance();
                         self.add_token(TokenType::LessEqual);
                     } else {
@@ -169,7 +191,7 @@ impl<'a> Scanner<'a> {
                     }
                 }
                 '>' => {
-                    if self.peak() == Some('=') {
+                    if self.peek() == Some(&'=') {
                         self.advance();
                         self.add_token(TokenType::GreaterEqual);
                     } else {
@@ -178,8 +200,8 @@ impl<'a> Scanner<'a> {
                 }
                 '/' => {
                     //? Comment
-                    if self.peak() == Some('/') {
-                        while self.peak() != Some('\n') && self.peak().is_some() {
+                    if self.peek() == Some(&'/') {
+                        while self.peek() != Some(&'\n') && self.peek().is_some() {
                             self.advance();
                         }
                     } else {
@@ -187,20 +209,36 @@ impl<'a> Scanner<'a> {
                     }
                 }
                 '"' => {
-                    while self.peak() != Some('"') && self.peak().is_some() {
-                        if self.peak() == Some('\n') {
+                    while self.peek() != Some(&'"') && self.peek().is_some() {
+                        if self.peek() == Some(&'\n') {
                             self.line += 1;
                         }
                         self.advance();
                     }
 
-                    if self.peak().is_none() {
+                    if self.peek().is_none() {
                         self.report.error(self.line, "Unterminated string.");
                         break;
                     }
 
                     self.advance();
                     self.add_token(TokenType::String);
+                }
+                c if c.is_digit(10) => {
+                    while self.peek().map_or(false, |c| c.is_digit(10)) {
+                        self.advance();
+                    }
+
+                    if self.peek() == Some(&'.')
+                        && self.chars.clone().nth(1).map_or(false, |c| c.is_digit(10))
+                    {
+                        self.advance();
+                        while self.peek().map_or(false, |c| c.is_digit(10)) {
+                            self.advance();
+                        }
+                    }
+
+                    self.add_token(TokenType::Number);
                 }
                 '\n' => self.line += 1,
                 c if c.is_whitespace() => {}
