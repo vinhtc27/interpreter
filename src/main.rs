@@ -1,5 +1,6 @@
 use std::env;
 use std::fs;
+use std::process::exit;
 
 use interpreter::Scanner;
 fn main() {
@@ -18,8 +19,18 @@ fn main() {
             });
 
             let scanner = Scanner::new(&file_contents);
-            for token in scanner.tokenize() {
-                println!("{token}");
+            match scanner.tokenize() {
+                Ok(tokens) => {
+                    for token in tokens {
+                        println!("{token}");
+                    }
+                }
+                Err(tokens) => {
+                    for token in tokens {
+                        println!("{token}");
+                    }
+                    exit(65)
+                }
             }
         }
         _ => {
