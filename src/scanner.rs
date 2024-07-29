@@ -8,6 +8,10 @@ pub enum TokenType {
     RightParen,
     LeftBrace,
     RightBrace,
+    Star,
+    Dot,
+    Comma,
+    Plus,
     // One or two character tokens
     //TODO:
     // Literals
@@ -25,6 +29,10 @@ impl Display for TokenType {
             TokenType::RightParen => write!(f, "RIGHT_PAREN"),
             TokenType::LeftBrace => write!(f, "LEFT_BRACE"),
             TokenType::RightBrace => write!(f, "RIGHT_BRACE"),
+            TokenType::Star => write!(f, "STAR"),
+            TokenType::Dot => write!(f, "DOT"),
+            TokenType::Comma => write!(f, "COMMA"),
+            TokenType::Plus => write!(f, "PLUS"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -113,9 +121,15 @@ impl<'a> Scanner<'a> {
                 ')' => self.add_token(TokenType::RightParen, None),
                 '{' => self.add_token(TokenType::LeftBrace, None),
                 '}' => self.add_token(TokenType::RightBrace, None),
+                '*' => self.add_token(TokenType::Star, None),
+                '.' => self.add_token(TokenType::Dot, None),
+                ',' => self.add_token(TokenType::Comma, None),
+                '+' => self.add_token(TokenType::Plus, None),
                 '\n' => self.line += 1,
                 c if c.is_whitespace() => {}
-                _ => self.report.error(self.line, "Unexpected character"),
+                _ => self
+                    .report
+                    .error(self.line, &format!("Unexpected character: {c}")),
             }
         }
 
