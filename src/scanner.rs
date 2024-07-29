@@ -117,7 +117,7 @@ impl<'a> Scanner<'a> {
         })
     }
 
-    pub fn tokenize(mut self) -> Result<Vec<Token>, ScanReport> {
+    pub fn tokenize(mut self) -> Vec<Token> {
         while let Some(c) = self.advance() {
             self.start = self.current - c.len_utf8();
             match c {
@@ -147,16 +147,12 @@ impl<'a> Scanner<'a> {
             line: self.line,
         });
 
-        if self.report.had_error {
-            Err(self.report)
-        } else {
-            Ok(self.tokens)
-        }
+        self.tokens
     }
 }
 
 #[derive(Default)]
-pub struct ScanReport {
+struct ScanReport {
     had_error: bool,
 }
 

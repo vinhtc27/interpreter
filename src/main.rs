@@ -18,10 +18,8 @@ fn main() {
             });
 
             let scanner = Scanner::new(&file_contents);
-            if let Ok(tokens) = scanner.tokenize() {
-                for token in tokens {
-                    println!("{token}");
-                }
+            for token in scanner.tokenize() {
+                println!("{token}");
             }
         }
         _ => {
