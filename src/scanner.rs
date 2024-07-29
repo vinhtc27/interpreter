@@ -14,6 +14,8 @@ pub enum TokenType {
     Plus,
     SemiColon,
     Star,
+    Equal,
+    EqualEqual,
     // One or two character tokens
     //TODO:
     // Literals
@@ -37,6 +39,8 @@ impl Display for TokenType {
             TokenType::Plus => write!(f, "PLUS"),
             TokenType::SemiColon => write!(f, "SEMICOLON"),
             TokenType::Star => write!(f, "STAR"),
+            TokenType::Equal => write!(f, "EQUAL"),
+            TokenType::EqualEqual => write!(f, "EQUAL_EQUAL"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -131,6 +135,13 @@ impl<'a> Scanner<'a> {
                 '+' => self.add_token(TokenType::Plus, None),
                 ';' => self.add_token(TokenType::SemiColon, None),
                 '*' => self.add_token(TokenType::Star, None),
+                '=' => {
+                    if self.advance() == Some('=') {
+                        self.add_token(TokenType::EqualEqual, None)
+                    } else {
+                        self.add_token(TokenType::Equal, None)
+                    }
+                }
                 '\n' => self.line += 1,
                 c if c.is_whitespace() => {}
                 _ => self
