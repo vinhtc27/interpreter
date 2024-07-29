@@ -25,6 +25,7 @@ pub enum TokenType {
     Slash,
     String,
     Number,
+    Identifier,
     Eof,
 }
 
@@ -52,6 +53,7 @@ impl Display for TokenType {
             TokenType::Slash => write!(f, "SLASH"),
             TokenType::String => write!(f, "STRING"),
             TokenType::Number => write!(f, "NUMBER"),
+            TokenType::Identifier => write!(f, "IDENTIFIER"),
             TokenType::Eof => write!(f, "EOF"),
         }
     }
@@ -246,6 +248,16 @@ impl<'a> Scanner<'a> {
                     }
 
                     self.add_token(TokenType::Number);
+                }
+                c if c.is_alphabetic() || c == '_' => {
+                    while self
+                        .peek()
+                        .map_or(false, |c| c.is_alphanumeric() || c == &'_')
+                    {
+                        self.advance();
+                    }
+
+                    self.add_token(TokenType::Identifier);
                 }
                 '\n' => self.line += 1,
                 c if c.is_whitespace() => {}
