@@ -18,6 +18,10 @@ pub enum TokenType {
     EqualEqual,
     Bang,
     BangEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
     // One or two character tokens
     //TODO:
     // Literals
@@ -45,6 +49,10 @@ impl Display for TokenType {
             TokenType::EqualEqual => write!(f, "EQUAL_EQUAL"),
             TokenType::Bang => write!(f, "BANG"),
             TokenType::BangEqual => write!(f, "BANG_EQUAL"),
+            TokenType::Less => write!(f, "LESS"),
+            TokenType::LessEqual => write!(f, "LESS_EQUAL"),
+            TokenType::Greater => write!(f, "GREATER"),
+            TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -157,6 +165,22 @@ impl<'a> Scanner<'a> {
                         self.add_token(TokenType::BangEqual, None);
                     } else {
                         self.add_token(TokenType::Bang, None);
+                    }
+                }
+                '<' => {
+                    if self.peak() == Some('=') {
+                        self.advance();
+                        self.add_token(TokenType::LessEqual, None);
+                    } else {
+                        self.add_token(TokenType::Less, None);
+                    }
+                }
+                '>' => {
+                    if self.peak() == Some('=') {
+                        self.advance();
+                        self.add_token(TokenType::GreaterEqual, None);
+                    } else {
+                        self.add_token(TokenType::Greater, None);
                     }
                 }
                 '\n' => self.line += 1,
