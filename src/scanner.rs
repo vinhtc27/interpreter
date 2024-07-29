@@ -25,7 +25,7 @@ pub enum TokenType {
     Slash,
     String,
     Number,
-    EOF,
+    Eof,
 }
 
 impl Display for TokenType {
@@ -52,7 +52,7 @@ impl Display for TokenType {
             TokenType::Slash => write!(f, "SLASH"),
             TokenType::String => write!(f, "STRING"),
             TokenType::Number => write!(f, "NUMBER"),
-            TokenType::EOF => write!(f, "EOF"),
+            TokenType::Eof => write!(f, "EOF"),
         }
     }
 }
@@ -84,7 +84,10 @@ pub struct Token {
 impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(ref literal) = self.literal {
-            write!(f, "{} {} {}", self.token_type, self.lexeme, literal)
+            match literal {
+                Literal::String(s) => write!(f, "{} {} {}", self.token_type, self.lexeme, s),
+                Literal::Number(n) => write!(f, "{} {} {:?}", self.token_type, self.lexeme, n),
+            }
         } else {
             write!(f, "{} {} null", self.token_type, self.lexeme)
         }
@@ -224,16 +227,20 @@ impl<'a> Scanner<'a> {
                     self.advance();
                     self.add_token(TokenType::String);
                 }
-                c if c.is_digit(10) => {
-                    while self.peek().map_or(false, |c| c.is_digit(10)) {
+                c if c.is_ascii_digit() => {
+                    while self.peek().map_or(false, |c| c.is_ascii_digit()) {
                         self.advance();
                     }
 
                     if self.peek() == Some(&'.')
-                        && self.chars.clone().nth(1).map_or(false, |c| c.is_digit(10))
+                        && self
+                            .chars
+                            .clone()
+                            .nth(1)
+                            .map_or(false, |c| c.is_ascii_digit())
                     {
                         self.advance();
-                        while self.peek().map_or(false, |c| c.is_digit(10)) {
+                        while self.peek().map_or(false, |c| c.is_ascii_digit()) {
                             self.advance();
                         }
                     }
@@ -250,7 +257,7 @@ impl<'a> Scanner<'a> {
 
         // NOTE: specifically not using `add_non_lit` to trim trailing newline for the lexeme
         self.tokens.push(Token {
-            token_type: TokenType::EOF,
+            token_type: TokenType::Eof,
             lexeme: String::new(),
             literal: None,
             line: self.line,
