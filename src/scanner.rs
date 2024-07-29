@@ -16,6 +16,8 @@ pub enum TokenType {
     Star,
     Equal,
     EqualEqual,
+    Bang,
+    BangEqual,
     // One or two character tokens
     //TODO:
     // Literals
@@ -41,6 +43,8 @@ impl Display for TokenType {
             TokenType::Star => write!(f, "STAR"),
             TokenType::Equal => write!(f, "EQUAL"),
             TokenType::EqualEqual => write!(f, "EQUAL_EQUAL"),
+            TokenType::Bang => write!(f, "BANG"),
+            TokenType::BangEqual => write!(f, "BANG_EQUAL"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -145,6 +149,14 @@ impl<'a> Scanner<'a> {
                         self.add_token(TokenType::EqualEqual, None);
                     } else {
                         self.add_token(TokenType::Equal, None);
+                    }
+                }
+                '!' => {
+                    if self.peak() == Some('=') {
+                        self.advance();
+                        self.add_token(TokenType::BangEqual, None);
+                    } else {
+                        self.add_token(TokenType::Bang, None);
                     }
                 }
                 '\n' => self.line += 1,
