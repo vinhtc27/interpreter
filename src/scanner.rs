@@ -195,7 +195,7 @@ impl<'a> Scanner<'a> {
                     }
 
                     if self.peak().is_none() {
-                        self.report.error(self.line, "Unterminated string");
+                        self.report.error(self.line, "Unterminated string.");
                         break;
                     }
 
