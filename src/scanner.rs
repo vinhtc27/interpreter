@@ -4,6 +4,8 @@ use std::str::Chars;
 
 #[derive(Debug, PartialEq)]
 pub enum TokenType {
+    //? Characters:
+    //? (, ), {, }, ,, ., -, +, ;, *, =, ==, !, !=, <, <=, >, >=, /
     LeftParen,
     RightParen,
     LeftBrace,
@@ -23,9 +25,30 @@ pub enum TokenType {
     Greater,
     GreaterEqual,
     Slash,
+    //? Literals:
     String,
     Number,
+    //? Reserved Words
+    //? and, class, else, false, for, fun, if, nil, or, print, return, super, this, true, var, while
+    And,
+    Class,
+    Else,
+    False,
+    For,
+    Fun,
+    If,
+    Nil,
+    Or,
+    Print,
+    Return,
+    Super,
+    This,
+    True,
+    Var,
+    While,
+    //? Identifier
     Identifier,
+    //? End of file
     Eof,
 }
 
@@ -54,6 +77,22 @@ impl Display for TokenType {
             TokenType::String => write!(f, "STRING"),
             TokenType::Number => write!(f, "NUMBER"),
             TokenType::Identifier => write!(f, "IDENTIFIER"),
+            TokenType::And => write!(f, "AND"),
+            TokenType::Class => write!(f, "CLASS"),
+            TokenType::Else => write!(f, "ELSE"),
+            TokenType::False => write!(f, "FALSE"),
+            TokenType::For => write!(f, "FOR"),
+            TokenType::Fun => write!(f, "FUN"),
+            TokenType::If => write!(f, "IF"),
+            TokenType::Nil => write!(f, "NIL"),
+            TokenType::Or => write!(f, "OR"),
+            TokenType::Print => write!(f, "PRINT"),
+            TokenType::Return => write!(f, "RETURN"),
+            TokenType::Super => write!(f, "SUPER"),
+            TokenType::This => write!(f, "THIS"),
+            TokenType::True => write!(f, "TRUE"),
+            TokenType::Var => write!(f, "VAR"),
+            TokenType::While => write!(f, "WHILE"),
             TokenType::Eof => write!(f, "EOF"),
         }
     }
@@ -257,7 +296,28 @@ impl<'a> Scanner<'a> {
                         self.advance();
                     }
 
-                    self.add_token(TokenType::Identifier);
+                    let lexeme = self.lexeme();
+                    let token_type = match lexeme {
+                        "and" => TokenType::And,
+                        "class" => TokenType::Class,
+                        "else" => TokenType::Else,
+                        "false" => TokenType::False,
+                        "for" => TokenType::For,
+                        "fun" => TokenType::Fun,
+                        "if" => TokenType::If,
+                        "nil" => TokenType::Nil,
+                        "or" => TokenType::Or,
+                        "print" => TokenType::Print,
+                        "return" => TokenType::Return,
+                        "super" => TokenType::Super,
+                        "this" => TokenType::This,
+                        "true" => TokenType::True,
+                        "var" => TokenType::Var,
+                        "while" => TokenType::While,
+                        _ => TokenType::Identifier,
+                    };
+
+                    self.add_token(token_type);
                 }
                 '\n' => self.line += 1,
                 c if c.is_whitespace() => {}
