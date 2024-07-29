@@ -22,6 +22,7 @@ pub enum TokenType {
     LessEqual,
     Greater,
     GreaterEqual,
+    Slash,
     // One or two character tokens
     //TODO:
     // Literals
@@ -53,6 +54,7 @@ impl Display for TokenType {
             TokenType::LessEqual => write!(f, "LESS_EQUAL"),
             TokenType::Greater => write!(f, "GREATER"),
             TokenType::GreaterEqual => write!(f, "GREATER_EQUAL"),
+            TokenType::Slash => write!(f, "SLASH"),
             TokenType::EOF => write!(f, "EOF"),
         }
     }
@@ -181,6 +183,16 @@ impl<'a> Scanner<'a> {
                         self.add_token(TokenType::GreaterEqual, None);
                     } else {
                         self.add_token(TokenType::Greater, None);
+                    }
+                }
+                '/' => {
+                    //? Comment
+                    if self.peak() == Some('/') {
+                        while self.peak() != Some('\n') && self.peak().is_some() {
+                            self.advance();
+                        }
+                    } else {
+                        self.add_token(TokenType::Slash, None);
                     }
                 }
                 '\n' => self.line += 1,
