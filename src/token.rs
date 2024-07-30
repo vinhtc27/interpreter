@@ -163,6 +163,7 @@ impl Expr {
                 let right = right.evaluate();
                 match (&operator.token_type, left, right) {
                     (TokenType::Plus, Value::Number(l), Value::Number(r)) => Value::Number(l + r),
+                    (TokenType::Plus, Value::String(l), Value::String(r)) => Value::String(l + &r),
                     (TokenType::Minus, Value::Number(l), Value::Number(r)) => Value::Number(l - r),
                     (TokenType::Star, Value::Number(l), Value::Number(r)) => Value::Number(l * r),
                     (TokenType::Slash, Value::Number(l), Value::Number(r)) => Value::Number(l / r),
