@@ -57,14 +57,11 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn tokens(&mut self) -> &[Token] {
-        if self.tokens.is_empty() {
-            self.tokenize(false);
-        }
+    pub fn tokens(&self) -> &[Token] {
         &self.tokens
     }
 
-    pub fn tokenize(&mut self, log: bool) -> ExitCode {
+    pub fn tokenize(&mut self) -> Result<(), ExitCode> {
         while let Some(c) = self.advance() {
             self.start = self.current - c.len_utf8();
             match c {
@@ -130,14 +127,29 @@ impl<'a> Scanner<'a> {
 
                     if self.peek().is_none() {
                         self.error(self.line, "Unterminated string.");
-                        break;
+                    } else {
+                        self.advance();
+                        self.add_token(TokenType::String(
+                            self.lexeme()[1..self.lexeme().len() - 1].to_string(),
+                        ));
                     }
-
-                    self.advance();
-                    self.add_token(TokenType::String(
-                        self.lexeme()[1..self.lexeme().len() - 1].to_string(),
-                    ));
                 }
+                // '&' => {
+                //     if self.peek() == Some(&'&') {
+                //         self.advance();
+                //         self.add_token(TokenType::And);
+                //     } else {
+                //         self.error(self.line, "Expected '&' after '&'.");
+                //     }
+                // }
+                // '|' => {
+                //     if self.peek() == Some(&'|') {
+                //         self.advance();
+                //         self.add_token(TokenType::Or);
+                //     } else {
+                //         self.error(self.line, "Expected '|' after '|'.");
+                //     }
+                // }
                 c if c.is_ascii_digit() => {
                     while self.peek().map_or(false, |c| c.is_ascii_digit()) {
                         self.advance();
@@ -201,14 +213,10 @@ impl<'a> Scanner<'a> {
             line: self.line,
         });
 
-        if log {
-            self.tokens.iter().for_each(|token| println!("{}", token));
-        }
-
         if self.error {
-            ExitCode::from(65)
+            Err(ExitCode::from(65))
         } else {
-            ExitCode::SUCCESS
+            Ok(())
         }
     }
 }

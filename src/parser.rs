@@ -5,6 +5,7 @@ use crate::token::{Expr, Token, TokenType};
 #[derive(Default)]
 pub struct Parser<'a> {
     tokens: &'a [Token],
+    exprs: Vec<Expr>,
     current: usize,
     error: bool,
 }
@@ -25,8 +26,44 @@ impl<'a> Parser<'a> {
         self.tokens[self.current - 1].clone()
     }
 
-    fn expression(&mut self) -> Result<Expr, ()> {
-        self.equality()
+    fn express(&mut self) -> Result<Expr, ()> {
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Result<Expr, ()> {
+        let expr = self.or()?;
+
+        if self.match_tokens(&[TokenType::Equal]) {
+            let equals = self.previous();
+            let value = self.assignment()?;
+            return Ok(Expr::Unary(equals, Box::new(value)));
+        }
+
+        Ok(expr)
+    }
+
+    fn or(&mut self) -> Result<Expr, ()> {
+        let mut expr = self.and()?;
+
+        while self.match_tokens(&[TokenType::Or]) {
+            let operator = self.previous();
+            let right = self.and()?;
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expr, ()> {
+        let mut expr = self.equality()?;
+
+        while self.match_tokens(&[TokenType::And]) {
+            let operator = self.previous();
+            let right = self.equality()?;
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> Result<Expr, ()> {
@@ -114,27 +151,39 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_tokens(&[TokenType::LeftParen]) {
-            let expr = self.expression()?;
+            let expr = self.express()?;
             self.consume(TokenType::RightParen, "Unmatched parentheses.")?;
             return Ok(Expr::Grouping(Box::new(expr)));
         }
 
         if self.match_tokens(&[TokenType::LeftBrace]) {
-            let expr = self.expression()?;
+            let expr = self.express()?;
             self.consume(TokenType::RightBrace, "Unmatched brace.")?;
             return Ok(Expr::Grouping(Box::new(expr)));
         }
 
-        if self.match_tokens(&[TokenType::RightParen]) {
-            self.consume(TokenType::RightParen, "Unmatched parentheses.")?;
-        }
-
-        if self.match_tokens(&[TokenType::RightBrace]) {
-            self.consume(TokenType::RightBrace, "Unmatched parentheses.")?;
+        if self.match_tokens(&[
+            TokenType::And,
+            TokenType::Class,
+            TokenType::Else,
+            TokenType::For,
+            TokenType::Fun,
+            TokenType::If,
+            TokenType::Or,
+            TokenType::Print,
+            TokenType::Return,
+            TokenType::Super,
+            TokenType::This,
+            TokenType::Var,
+            TokenType::While,
+            TokenType::Identifier,
+        ]) {
+            // self.advance();
+            return Ok(Expr::Literal(self.previous()));
         }
 
         self.advance();
-        Ok(Expr::Literal(self.previous()))
+        Err(self.error(self.line(), "Expect expression."))
     }
 
     fn match_tokens(&mut self, types: &[TokenType]) -> bool {
@@ -155,17 +204,21 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn consume(&mut self, t: TokenType, message: &str) -> Result<Token, ()> {
-        if self.check(&t) {
+    fn line(&self) -> usize {
+        self.peek().line
+    }
+
+    fn consume(&mut self, token_type: TokenType, message: &str) -> Result<Token, ()> {
+        if self.check(&token_type) {
             Ok(self.advance())
         } else {
-            self.error(message);
+            self.error(self.line(), message);
             Err(())
         }
     }
 
-    fn error(&mut self, message: &str) {
-        eprintln!("Error: {message}");
+    fn error(&mut self, line: usize, message: &str) {
+        eprintln!("[line {}] Error: {}", line, message);
         self.error = true;
     }
 
@@ -176,21 +229,26 @@ impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token]) -> Self {
         Parser {
             tokens,
+            exprs: vec![],
             current: 0,
             error: false,
         }
     }
 
-    pub fn parse(&mut self) -> ExitCode {
+    pub fn expressions(&self) -> &[Expr] {
+        &self.exprs
+    }
+
+    pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
-            if let Ok(expr) = self.expression() {
-                println!("{}", expr);
+            if let Ok(expr) = self.express() {
+                self.exprs.push(expr);
             }
         }
         if self.error {
-            ExitCode::from(65)
+            Err(ExitCode::from(65))
         } else {
-            ExitCode::SUCCESS
+            Ok(())
         }
     }
 }

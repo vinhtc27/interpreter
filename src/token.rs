@@ -27,7 +27,7 @@ pub enum TokenType {
     Number(f64),
     //? Identifier
     Identifier,
-    //? Reserved Words: and, class, else, false, for, fun, if, nil, or, print, return, super, this, true, var, while
+    //? Reserved Words: and (&&), class, else, false, for, fun, if, nil, or (||), print, return, super, this, true, var, while
     And,
     Class,
     Else,

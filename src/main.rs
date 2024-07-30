@@ -26,17 +26,37 @@ fn main() -> ExitCode {
     });
 
     let mut scanner = Scanner::new(&file_contents);
-
     match command.as_str() {
-        "tokenize" => scanner.tokenize(true),
+        "tokenize" => {
+            if let Err(exitcode) = scanner.tokenize() {
+                for token in scanner.tokens() {
+                    println!("{}", token);
+                }
+                return exitcode;
+            } else {
+                for token in scanner.tokens() {
+                    println!("{}", token);
+                }
+                return ExitCode::SUCCESS;
+            }
+        }
         "parse" => {
-            let tokens = scanner.tokens();
-            let mut parser = Parser::new(tokens);
-            parser.parse()
+            if let Err(exitcode) = scanner.tokenize() {
+                return exitcode;
+            }
+            let mut parser = Parser::new(scanner.tokens());
+            if let Err(exitcode) = parser.parse() {
+                return exitcode;
+            }
+            let exprs = parser.expressions();
+            for expr in exprs {
+                println!("{}", expr);
+            }
+            return ExitCode::SUCCESS;
         }
         _ => {
             eprintln!("Unknown command: {command}");
-            ExitCode::FAILURE
+            return ExitCode::FAILURE;
         }
     }
 }
