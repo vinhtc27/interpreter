@@ -175,23 +175,11 @@ impl Expr {
                     (TokenType::Minus, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l - r))
                     }
-                    (TokenType::Minus, _, _) => {
-                        eprintln!("Operand must be a number.");
-                        Err(ExitCode::from(70))
-                    }
                     (TokenType::Star, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l * r))
                     }
-                    (TokenType::Star, _, _) => {
-                        eprintln!("Operand must be a number.");
-                        Err(ExitCode::from(70))
-                    }
                     (TokenType::Slash, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l / r))
-                    }
-                    (TokenType::Slash, _, _) => {
-                        eprintln!("Operand must be a number.");
-                        Err(ExitCode::from(70))
                     }
                     (TokenType::Greater, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Boolean(l > r))
@@ -204,6 +192,20 @@ impl Expr {
                     }
                     (TokenType::LessEqual, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Boolean(l <= r))
+                    }
+                    (
+                        TokenType::Minus
+                        | TokenType::Star
+                        | TokenType::Slash
+                        | TokenType::Greater
+                        | TokenType::GreaterEqual
+                        | TokenType::Less
+                        | TokenType::LessEqual,
+                        _,
+                        _,
+                    ) => {
+                        eprintln!("Operand must be a number.");
+                        Err(ExitCode::from(70))
                     }
                     (TokenType::EqualEqual, l, r) => Ok(Value::Boolean(l == r)),
                     (TokenType::BangEqual, l, r) => Ok(Value::Boolean(l != r)),
