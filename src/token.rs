@@ -168,8 +168,16 @@ impl Expr {
                     (TokenType::Plus, Value::String(l), Value::String(r)) => {
                         Ok(Value::String(l + &r))
                     }
+                    (TokenType::Plus, _, _) => {
+                        eprintln!("Operands must be two numbers or two strings.");
+                        Err(ExitCode::from(70))
+                    }
                     (TokenType::Minus, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l - r))
+                    }
+                    (TokenType::Minus, _, _) => {
+                        eprintln!("Operand must be a number.");
+                        Err(ExitCode::from(70))
                     }
                     (TokenType::Star, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l * r))
