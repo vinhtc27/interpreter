@@ -174,8 +174,16 @@ impl Expr {
                     (TokenType::Star, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l * r))
                     }
+                    (TokenType::Star, _, _) => {
+                        eprintln!("Operand must be a number.");
+                        Err(ExitCode::from(70))
+                    }
                     (TokenType::Slash, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l / r))
+                    }
+                    (TokenType::Slash, _, _) => {
+                        eprintln!("Operand must be a number.");
+                        Err(ExitCode::from(70))
                     }
                     (TokenType::Greater, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Boolean(l > r))
