@@ -2,8 +2,13 @@ use std::env;
 use std::fs;
 use std::process::ExitCode;
 
-use interpreter::Interpreter;
-mod interpreter;
+mod parser;
+use parser::Parser;
+
+mod scanner;
+use scanner::Scanner;
+
+mod token;
 
 fn main() -> ExitCode {
     let args = env::args().collect::<Vec<_>>();
@@ -11,6 +16,7 @@ fn main() -> ExitCode {
         eprintln!("Usage: {} tokenize <filename>", args[0]);
         return ExitCode::SUCCESS;
     }
+
     let command = &args[1];
     let filename = &args[2];
 
@@ -19,10 +25,15 @@ fn main() -> ExitCode {
         String::new()
     });
 
-    let mut interpreter = Interpreter::new(&file_contents);
+    let mut scanner = Scanner::new(&file_contents);
+
     match command.as_str() {
-        "tokenize" => interpreter.tokenize(true),
-        "parse" => interpreter.parse(),
+        "tokenize" => scanner.tokenize(true),
+        "parse" => {
+            let tokens = scanner.tokens();
+            let mut parser = Parser::new(tokens);
+            parser.parse()
+        }
         _ => {
             eprintln!("Unknown command: {command}");
             ExitCode::FAILURE
