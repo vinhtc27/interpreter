@@ -371,6 +371,8 @@ impl<'a> Interpreter<'a> {
                                 {
                                     println!("{} {:?} {:?}", lexeme, first, second);
                                 }
+                            } else {
+                                println!("{}", first);
                             }
                         }
                     }
