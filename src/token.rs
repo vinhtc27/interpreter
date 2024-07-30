@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, process::ExitCode};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -156,63 +156,77 @@ impl Display for Value {
 }
 
 impl Expr {
-    pub fn evaluate(&self) -> Value {
+    pub fn evaluate(&self) -> Result<Value, ExitCode> {
         match self {
             Expr::Binary(left, operator, right) => {
-                let left = left.evaluate();
-                let right = right.evaluate();
+                let left = left.evaluate()?;
+                let right = right.evaluate()?;
                 match (&operator.token_type, left, right) {
-                    (TokenType::Plus, Value::Number(l), Value::Number(r)) => Value::Number(l + r),
-                    (TokenType::Plus, Value::String(l), Value::String(r)) => Value::String(l + &r),
-                    (TokenType::Minus, Value::Number(l), Value::Number(r)) => Value::Number(l - r),
-                    (TokenType::Star, Value::Number(l), Value::Number(r)) => Value::Number(l * r),
-                    (TokenType::Slash, Value::Number(l), Value::Number(r)) => Value::Number(l / r),
+                    (TokenType::Plus, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l + r))
+                    }
+                    (TokenType::Plus, Value::String(l), Value::String(r)) => {
+                        Ok(Value::String(l + &r))
+                    }
+                    (TokenType::Minus, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l - r))
+                    }
+                    (TokenType::Star, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l * r))
+                    }
+                    (TokenType::Slash, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Number(l / r))
+                    }
                     (TokenType::Greater, Value::Number(l), Value::Number(r)) => {
-                        Value::Boolean(l > r)
+                        Ok(Value::Boolean(l > r))
                     }
                     (TokenType::GreaterEqual, Value::Number(l), Value::Number(r)) => {
-                        Value::Boolean(l >= r)
+                        Ok(Value::Boolean(l >= r))
                     }
-                    (TokenType::Less, Value::Number(l), Value::Number(r)) => Value::Boolean(l < r),
+                    (TokenType::Less, Value::Number(l), Value::Number(r)) => {
+                        Ok(Value::Boolean(l < r))
+                    }
                     (TokenType::LessEqual, Value::Number(l), Value::Number(r)) => {
-                        Value::Boolean(l <= r)
+                        Ok(Value::Boolean(l <= r))
                     }
-                    (TokenType::EqualEqual, l, r) => Value::Boolean(l == r),
-                    (TokenType::BangEqual, l, r) => Value::Boolean(l != r),
-                    _ => panic!("Invalid operator: {:?}", operator),
+                    (TokenType::EqualEqual, l, r) => Ok(Value::Boolean(l == r)),
+                    (TokenType::BangEqual, l, r) => Ok(Value::Boolean(l != r)),
+                    _ => Err(ExitCode::from(65)),
                 }
             }
             Expr::Grouping(expr) => expr.evaluate(),
             Expr::Literal(token) => match &token.token_type {
-                TokenType::Number(n) => Value::Number(*n),
-                TokenType::String(s) => Value::String(s.clone()),
-                TokenType::True => Value::Boolean(true),
-                TokenType::False => Value::Boolean(false),
-                TokenType::Nil => Value::Nil,
-                _ => panic!("Invalid literal: {:?}", token),
+                TokenType::Number(n) => Ok(Value::Number(*n)),
+                TokenType::String(s) => Ok(Value::String(s.clone())),
+                TokenType::True => Ok(Value::Boolean(true)),
+                TokenType::False => Ok(Value::Boolean(false)),
+                TokenType::Nil => Ok(Value::Nil),
+                _ => Err(ExitCode::from(65)),
             },
             Expr::Unary(operator, expr) => {
-                let expr = expr.evaluate();
+                let expr = expr.evaluate()?;
                 match operator.token_type {
                     TokenType::Minus => {
                         if let Value::Number(n) = expr {
-                            Value::Number(-n)
+                            Ok(Value::Number(-n))
                         } else {
-                            panic!("Invalid operand for unary minus: {:?}", expr)
+                            eprintln!("Operand must be a number.");
+                            Err(ExitCode::from(70))
                         }
                     }
                     TokenType::Bang => {
                         if let Value::Boolean(b) = expr {
-                            Value::Boolean(!b)
+                            Ok(Value::Boolean(!b))
                         } else if let Value::Number(_) = expr {
-                            Value::Boolean(false)
+                            Ok(Value::Boolean(false))
                         } else if let Value::Nil = expr {
-                            Value::Boolean(true)
+                            Ok(Value::Boolean(true))
                         } else {
-                            panic!("Invalid operand for unary bang: {:?}", expr)
+                            eprintln!("Operand must be a number or boolean.");
+                            Err(ExitCode::from(65))
                         }
                     }
-                    _ => panic!("Invalid operator: {:?}", operator),
+                    _ => Err(ExitCode::from(65)),
                 }
             }
         }

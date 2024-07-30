@@ -64,7 +64,10 @@ fn main() -> ExitCode {
             }
             let exprs = parser.expressions();
             for expr in exprs {
-                println!("{}", expr.evaluate());
+                match expr.evaluate() {
+                    Ok(value) => println!("{}", value),
+                    Err(exitcode) => return exitcode,
+                }
             }
             ExitCode::SUCCESS
         }
