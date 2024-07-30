@@ -1,11 +1,11 @@
 use std::fmt::Display;
 use std::iter::Peekable;
+use std::process::ExitCode;
 use std::str::Chars;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum TokenType {
-    //? Characters:
-    //? (, ), {, }, ,, ., -, +, ;, *, =, ==, !, !=, <, <=, >, >=, /
+    //? Characters: (, ), {, }, ,, ., -, +, ;, *, =, ==, !, !=, <, <=, >, >=, /
     LeftParen,
     RightParen,
     LeftBrace,
@@ -28,8 +28,9 @@ pub enum TokenType {
     //? Literals:
     String,
     Number,
-    //? Reserved Words
-    //? and, class, else, false, for, fun, if, nil, or, print, return, super, this, true, var, while
+    //? Identifier
+    Identifier,
+    //? Reserved Words: and, class, else, false, for, fun, if, nil, or, print, return, super, this, true, var, while
     And,
     Class,
     Else,
@@ -46,8 +47,6 @@ pub enum TokenType {
     True,
     Var,
     While,
-    //? Identifier
-    Identifier,
     //? End of file
     Eof,
 }
@@ -98,7 +97,7 @@ impl Display for TokenType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Literal {
     String(String),
     Number(f64),
@@ -114,7 +113,7 @@ impl Display for Literal {
 }
 
 #[allow(dead_code)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Token {
     token_type: TokenType,
     lexeme: String,
@@ -135,7 +134,7 @@ impl Display for Token {
     }
 }
 
-pub struct Scanner<'a> {
+pub struct Interpreter<'a> {
     source: &'a str,
     chars: Peekable<Chars<'a>>,
     tokens: Vec<Token>,
@@ -145,7 +144,7 @@ pub struct Scanner<'a> {
     report: ScanReport,
 }
 
-impl<'a> Scanner<'a> {
+impl<'a> Interpreter<'a> {
     #[inline]
     pub fn new(source: &'a str) -> Self {
         Self {
@@ -180,12 +179,10 @@ impl<'a> Scanner<'a> {
     fn add_token(&mut self, token_type: TokenType) {
         let lexeme = self.lexeme();
 
-        let literal = if token_type == TokenType::String {
-            Some(Literal::String(lexeme[1..lexeme.len() - 1].to_string()))
-        } else if token_type == TokenType::Number {
-            Some(Literal::Number(lexeme.parse().unwrap()))
-        } else {
-            None
+        let literal = match token_type {
+            TokenType::String => Some(Literal::String(lexeme[1..lexeme.len() - 1].to_string())),
+            TokenType::Number => Some(Literal::Number(lexeme.parse().unwrap())),
+            _ => None,
         };
 
         self.tokens.push(Token {
@@ -196,7 +193,7 @@ impl<'a> Scanner<'a> {
         })
     }
 
-    pub fn tokenize(mut self) -> Result<Vec<Token>, Vec<Token>> {
+    pub fn tokenize(&mut self, log: bool) -> ExitCode {
         while let Some(c) = self.advance() {
             self.start = self.current - c.len_utf8();
             match c {
@@ -327,7 +324,6 @@ impl<'a> Scanner<'a> {
             }
         }
 
-        // NOTE: specifically not using `add_non_lit` to trim trailing newline for the lexeme
         self.tokens.push(Token {
             token_type: TokenType::Eof,
             lexeme: String::new(),
@@ -335,11 +331,60 @@ impl<'a> Scanner<'a> {
             line: self.line,
         });
 
-        if self.report.had_error {
-            Err(self.tokens)
-        } else {
-            Ok(self.tokens)
+        if log {
+            self.tokens.iter().for_each(|token| println!("{}", token));
         }
+
+        if self.report.had_error {
+            ExitCode::from(65)
+        } else {
+            ExitCode::SUCCESS
+        }
+    }
+
+    pub fn parse(&mut self) -> ExitCode {
+        if self.tokens.is_empty() {
+            self.tokenize(false);
+        }
+
+        let mut tokens = self.tokens.clone();
+        tokens.reverse();
+
+        while let Some(token) = tokens.pop() {
+            match token.token_type {
+                TokenType::Number => {
+                    if let Some(Literal::Number(first)) = token.literal {
+                        if let Some(Token {
+                            token_type, lexeme, ..
+                        }) = tokens.pop()
+                        {
+                            if let TokenType::Plus
+                            | TokenType::Minus
+                            | TokenType::Star
+                            | TokenType::Slash = token_type
+                            {
+                                if let Some(Token {
+                                    token_type: TokenType::Number,
+                                    literal: Some(Literal::Number(second)),
+                                    ..
+                                }) = tokens.pop()
+                                {
+                                    println!("{} {:?} {:?}", lexeme, first, second);
+                                }
+                            }
+                        }
+                    }
+                }
+                TokenType::String => {
+                    if let Some(Literal::String(s)) = token.literal {
+                        println!("{}", s);
+                    }
+                }
+                _ => println!("{}", token.lexeme),
+            }
+        }
+
+        ExitCode::SUCCESS
     }
 }
 
