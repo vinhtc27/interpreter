@@ -32,12 +32,12 @@ fn main() -> ExitCode {
                 for token in scanner.tokens() {
                     println!("{}", token);
                 }
-                return exitcode;
+                exitcode
             } else {
                 for token in scanner.tokens() {
                     println!("{}", token);
                 }
-                return ExitCode::SUCCESS;
+                ExitCode::SUCCESS
             }
         }
         "parse" => {
@@ -52,11 +52,25 @@ fn main() -> ExitCode {
             for expr in exprs {
                 println!("{}", expr);
             }
-            return ExitCode::SUCCESS;
+            ExitCode::SUCCESS
+        }
+        "evaluate" => {
+            if let Err(exitcode) = scanner.tokenize() {
+                return exitcode;
+            }
+            let mut parser = Parser::new(scanner.tokens());
+            if let Err(exitcode) = parser.parse() {
+                return exitcode;
+            }
+            let exprs = parser.expressions();
+            for expr in exprs {
+                println!("{}", expr.evaluate());
+            }
+            ExitCode::SUCCESS
         }
         _ => {
             eprintln!("Unknown command: {command}");
-            return ExitCode::FAILURE;
+            ExitCode::FAILURE
         }
     }
 }

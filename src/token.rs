@@ -27,7 +27,7 @@ pub enum TokenType {
     Number(f64),
     //? Identifier
     Identifier,
-    //? Reserved Words: and (&&), class, else, false, for, fun, if, nil, or (||), print, return, super, this, true, var, while
+    //? Reserved Words: and, class, else, false, for, fun, if, nil, or, print, return, super, this, true, var, while
     And,
     Class,
     Else,
@@ -132,6 +132,84 @@ impl Display for Expr {
                 _ => write!(f, "{}", token.lexeme),
             },
             Expr::Unary(operator, expr) => write!(f, "({} {expr})", operator.lexeme),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Value {
+    Number(f64),
+    Boolean(bool),
+    String(String),
+    Nil,
+}
+
+impl Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Value::Number(n) => write!(f, "{}", n),
+            Value::Boolean(b) => write!(f, "{}", b),
+            Value::String(s) => write!(f, "{}", s),
+            Value::Nil => write!(f, "nil"),
+        }
+    }
+}
+
+impl Expr {
+    pub fn evaluate(&self) -> Value {
+        match self {
+            Expr::Binary(left, operator, right) => {
+                let left = left.evaluate();
+                let right = right.evaluate();
+                match (&operator.token_type, left, right) {
+                    (TokenType::Plus, Value::Number(l), Value::Number(r)) => Value::Number(l + r),
+                    (TokenType::Minus, Value::Number(l), Value::Number(r)) => Value::Number(l - r),
+                    (TokenType::Star, Value::Number(l), Value::Number(r)) => Value::Number(l * r),
+                    (TokenType::Slash, Value::Number(l), Value::Number(r)) => Value::Number(l / r),
+                    (TokenType::Greater, Value::Number(l), Value::Number(r)) => {
+                        Value::Boolean(l > r)
+                    }
+                    (TokenType::GreaterEqual, Value::Number(l), Value::Number(r)) => {
+                        Value::Boolean(l >= r)
+                    }
+                    (TokenType::Less, Value::Number(l), Value::Number(r)) => Value::Boolean(l < r),
+                    (TokenType::LessEqual, Value::Number(l), Value::Number(r)) => {
+                        Value::Boolean(l <= r)
+                    }
+                    (TokenType::EqualEqual, l, r) => Value::Boolean(l == r),
+                    (TokenType::BangEqual, l, r) => Value::Boolean(l != r),
+                    _ => panic!("Invalid operator: {:?}", operator),
+                }
+            }
+            Expr::Grouping(expr) => expr.evaluate(),
+            Expr::Literal(token) => match &token.token_type {
+                TokenType::Number(n) => Value::Number(*n),
+                TokenType::String(s) => Value::String(s.clone()),
+                TokenType::True => Value::Boolean(true),
+                TokenType::False => Value::Boolean(false),
+                TokenType::Nil => Value::Nil,
+                _ => panic!("Invalid literal: {:?}", token),
+            },
+            Expr::Unary(operator, expr) => {
+                let expr = expr.evaluate();
+                match operator.token_type {
+                    TokenType::Minus => {
+                        if let Value::Number(n) = expr {
+                            Value::Number(-n)
+                        } else {
+                            panic!("Invalid operand for unary minus: {:?}", expr)
+                        }
+                    }
+                    TokenType::Bang => {
+                        if let Value::Boolean(b) = expr {
+                            Value::Boolean(!b)
+                        } else {
+                            panic!("Invalid operand for unary bang: {:?}", expr)
+                        }
+                    }
+                    _ => panic!("Invalid operator: {:?}", operator),
+                }
+            }
         }
     }
 }

@@ -134,22 +134,6 @@ impl<'a> Scanner<'a> {
                         ));
                     }
                 }
-                // '&' => {
-                //     if self.peek() == Some(&'&') {
-                //         self.advance();
-                //         self.add_token(TokenType::And);
-                //     } else {
-                //         self.error(self.line, "Expected '&' after '&'.");
-                //     }
-                // }
-                // '|' => {
-                //     if self.peek() == Some(&'|') {
-                //         self.advance();
-                //         self.add_token(TokenType::Or);
-                //     } else {
-                //         self.error(self.line, "Expected '|' after '|'.");
-                //     }
-                // }
                 c if c.is_ascii_digit() => {
                     while self.peek().map_or(false, |c| c.is_ascii_digit()) {
                         self.advance();

@@ -27,19 +27,7 @@ impl<'a> Parser<'a> {
     }
 
     fn express(&mut self) -> Result<Expr, ()> {
-        self.assignment()
-    }
-
-    fn assignment(&mut self) -> Result<Expr, ()> {
-        let expr = self.or()?;
-
-        if self.match_tokens(&[TokenType::Equal]) {
-            let equals = self.previous();
-            let value = self.assignment()?;
-            return Ok(Expr::Unary(equals, Box::new(value)));
-        }
-
-        Ok(expr)
+        self.or()
     }
 
     fn or(&mut self) -> Result<Expr, ()> {
@@ -183,7 +171,8 @@ impl<'a> Parser<'a> {
         }
 
         self.advance();
-        Err(self.error(self.line(), "Expect expression."))
+        self.error(self.line(), "Expect expression.");
+        Err(())
     }
 
     fn match_tokens(&mut self, types: &[TokenType]) -> bool {
