@@ -203,6 +203,10 @@ impl Expr {
                     TokenType::Bang => {
                         if let Value::Boolean(b) = expr {
                             Value::Boolean(!b)
+                        } else if let Value::Number(_) = expr {
+                            Value::Boolean(false)
+                        } else if let Value::Nil = expr {
+                            Value::Boolean(true)
                         } else {
                             panic!("Invalid operand for unary bang: {:?}", expr)
                         }
