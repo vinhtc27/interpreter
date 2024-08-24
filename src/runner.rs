@@ -11,18 +11,31 @@ impl<'a> Runner<'a> {
         Self { stmts }
     }
 
+    pub fn evaluate(&self) -> Result<(), ExitCode> {
+        for stmt in self.stmts {
+            println!(
+                "{}",
+                match stmt {
+                    Stmt::Expr(expr) => expr.evaluate(&HashMap::new())?,
+                    Stmt::Print(_) | Stmt::Var(_, _) => unreachable!(),
+                }
+            );
+        }
+        Ok(())
+    }
+
     pub fn run(&self) -> Result<(), ExitCode> {
         let mut vars: HashMap<String, Expr> = HashMap::new();
         for stmt in self.stmts {
             match stmt {
                 Stmt::Expr(expr) => {
-                    expr.evaluate()?;
+                    expr.evaluate(&vars)?;
                 }
                 Stmt::Print(expr) => {
                     let value = if let Some(var) = vars.get(&expr.to_string()) {
-                        var.evaluate()?
+                        var.evaluate(&vars)?
                     } else {
-                        expr.evaluate()?
+                        expr.evaluate(&vars)?
                     };
                     println!("{}", value);
                 }

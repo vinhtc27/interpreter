@@ -63,11 +63,9 @@ fn main() -> ExitCode {
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
-            let stmts = parser.statements();
-            for stmt in stmts {
-                if let Err(exitcode) = stmt.evaluate() {
-                    return exitcode;
-                }
+            let runner = Runner::new(parser.statements());
+            if let Err(exitcode) = runner.evaluate() {
+                return exitcode;
             }
             ExitCode::SUCCESS
         }

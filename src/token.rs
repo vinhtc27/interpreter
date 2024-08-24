@@ -1,4 +1,4 @@
-use std::{fmt::Display, process::ExitCode};
+use std::{collections::HashMap, fmt::Display, process::ExitCode};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -157,11 +157,11 @@ impl Display for Value {
 }
 
 impl Expr {
-    pub fn evaluate(&self) -> Result<Value, ExitCode> {
+    pub fn evaluate(&self, vars: &HashMap<String, Expr>) -> Result<Value, ExitCode> {
         match self {
             Expr::Binary(left, operator, right) => {
-                let left = left.evaluate()?;
-                let right = right.evaluate()?;
+                let left = left.evaluate(vars)?;
+                let right = right.evaluate(vars)?;
                 match (&operator.token_type, left, right) {
                     (TokenType::Plus, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l + r))
@@ -213,17 +213,25 @@ impl Expr {
                     _ => Err(ExitCode::from(65)),
                 }
             }
-            Expr::Grouping(expr) => expr.evaluate(),
+            Expr::Grouping(expr) => expr.evaluate(vars),
             Expr::Literal(token) => match &token.token_type {
                 TokenType::Number(n) => Ok(Value::Number(*n)),
                 TokenType::String(s) => Ok(Value::String(s.clone())),
                 TokenType::True => Ok(Value::Boolean(true)),
                 TokenType::False => Ok(Value::Boolean(false)),
                 TokenType::Nil => Ok(Value::Nil),
+                TokenType::Identifier => {
+                    if let Some(expr) = vars.get(&token.lexeme) {
+                        expr.evaluate(vars)
+                    } else {
+                        eprintln!("Undefined variable '{}'.", token.lexeme);
+                        return Err(ExitCode::from(70));
+                    }
+                }
                 _ => Err(ExitCode::from(65)),
             },
             Expr::Unary(operator, expr) => {
-                let expr = expr.evaluate()?;
+                let expr = expr.evaluate(vars)?;
                 match operator.token_type {
                     TokenType::Minus => {
                         if let Value::Number(n) = expr {
@@ -265,18 +273,5 @@ impl Display for Stmt {
             Stmt::Print(expr) => write!(f, "print {};", expr),
             Stmt::Var(var, expr) => write!(f, "var {} = {};", var, expr),
         }
-    }
-}
-
-impl Stmt {
-    pub fn evaluate(&self) -> Result<(), ExitCode> {
-        println!(
-            "{}",
-            match self {
-                Stmt::Expr(expr) => expr.evaluate()?,
-                Stmt::Print(_) | Stmt::Var(_, _) => unreachable!(),
-            }
-        );
-        Ok(())
     }
 }
