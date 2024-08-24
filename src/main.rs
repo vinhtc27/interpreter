@@ -1,6 +1,4 @@
-use std::env;
-use std::fs;
-use std::process::ExitCode;
+use std::{env, fs, process::ExitCode};
 
 mod parser;
 use parser::Parser;
@@ -54,7 +52,7 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
-        "evaluate" => {
+        "evaluate" | "run" => {
             if let Err(exitcode) = scanner.tokenize() {
                 return exitcode;
             }
@@ -62,26 +60,9 @@ fn main() -> ExitCode {
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
-            let statements = parser.statements();
-            for statement in statements {
-                match statement.evaluate() {
-                    Ok(value) => println!("{}", value),
-                    Err(exitcode) => return exitcode,
-                }
-            }
-            ExitCode::SUCCESS
-        }
-        "run" => {
-            if let Err(exitcode) = scanner.tokenize() {
-                return exitcode;
-            }
-            let mut parser = Parser::new(scanner.tokens(), true);
-            if let Err(exitcode) = parser.parse() {
-                return exitcode;
-            }
-            let statements = parser.statements();
-            for statement in statements {
-                match statement.evaluate() {
+            let stmts = parser.statements();
+            for stmt in stmts {
+                match stmt.run() {
                     Ok(value) => println!("{}", value),
                     Err(exitcode) => return exitcode,
                 }

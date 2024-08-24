@@ -251,25 +251,25 @@ impl Expr {
     }
 }
 
-pub enum Statement {
+pub enum Stmt {
     Expr(Expr),
     Print(Expr),
 }
 
-impl Display for Statement {
+impl Display for Stmt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Statement::Expr(expr) => write!(f, "{};", expr),
-            Statement::Print(expr) => write!(f, "print {};", expr),
+            Stmt::Expr(expr) => write!(f, "{}", expr),
+            Stmt::Print(expr) => write!(f, "print {};", expr),
         }
     }
 }
 
-impl Statement {
-    pub fn evaluate(&self) -> Result<Value, ExitCode> {
+impl Stmt {
+    pub fn run(&self) -> Result<Value, ExitCode> {
         match self {
-            Statement::Expr(expr) => expr.evaluate(),
-            Statement::Print(expr) => {
+            Stmt::Expr(expr) => expr.evaluate(),
+            Stmt::Print(expr) => {
                 let value = expr.evaluate()?;
                 Ok(value)
             }

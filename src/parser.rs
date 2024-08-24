@@ -1,11 +1,11 @@
 use std::process::ExitCode;
 
-use crate::token::{Expr, Statement, Token, TokenType};
+use crate::token::{Expr, Stmt, Token, TokenType};
 
 #[derive(Default)]
 pub struct Parser<'a> {
     tokens: &'a [Token],
-    statements: Vec<Statement>,
+    stmts: Vec<Stmt>,
     current: usize,
     error: bool,
     run: bool,
@@ -15,21 +15,21 @@ impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token], run: bool) -> Self {
         Parser {
             tokens,
-            statements: vec![],
+            stmts: vec![],
             current: 0,
             error: false,
             run,
         }
     }
 
-    pub fn statements(&self) -> &[Statement] {
-        &self.statements
+    pub fn statements(&self) -> &[Stmt] {
+        &self.stmts
     }
 
     pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
             if let Ok(stmt) = self.statement() {
-                self.statements.push(stmt);
+                self.stmts.push(stmt);
             }
         }
         if self.error {
@@ -39,7 +39,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn statement(&mut self) -> Result<Statement, ()> {
+    fn statement(&mut self) -> Result<Stmt, ()> {
         if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
         } else {
@@ -47,20 +47,20 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn print_statement(&mut self) -> Result<Statement, ()> {
+    fn print_statement(&mut self) -> Result<Stmt, ()> {
         let value = self.express()?;
         if self.run {
             self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
         }
-        Ok(Statement::Print(value))
+        Ok(Stmt::Print(value))
     }
 
-    fn expression_statement(&mut self) -> Result<Statement, ()> {
+    fn expression_statement(&mut self) -> Result<Stmt, ()> {
         let expr = self.express()?;
         if self.run {
             self.consume(TokenType::SemiColon, "Expect ';' after expression.")?;
         }
-        Ok(Statement::Expr(expr))
+        Ok(Stmt::Expr(expr))
     }
 
     fn peek(&self) -> &Token {
