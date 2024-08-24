@@ -40,7 +40,9 @@ impl<'a> Runner<'a> {
                     println!("{}", value);
                 }
                 Stmt::Var(var, expr) => {
-                    vars.insert(var.clone(), expr.clone());
+                    if *var != expr.to_string() {
+                        vars.insert(var.clone(), expr.clone());
+                    }
                 }
             }
         }
