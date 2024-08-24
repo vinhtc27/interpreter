@@ -27,7 +27,34 @@ fn main() -> ExitCode {
 
     let mut scanner = Scanner::new(&file_contents);
     match command.as_str() {
-        "run" => {
+        "tokenize" => {
+            if let Err(exitcode) = scanner.tokenize() {
+                for token in scanner.tokens() {
+                    println!("{}", token);
+                }
+                exitcode
+            } else {
+                for token in scanner.tokens() {
+                    println!("{}", token);
+                }
+                ExitCode::SUCCESS
+            }
+        }
+        "parse" => {
+            if let Err(exitcode) = scanner.tokenize() {
+                return exitcode;
+            }
+            let mut parser = Parser::new(scanner.tokens());
+            if let Err(exitcode) = parser.parse() {
+                return exitcode;
+            }
+            let statements = parser.statements();
+            for statements in statements {
+                println!("{}", statements);
+            }
+            ExitCode::SUCCESS
+        }
+        "evaluate" | "run" => {
             if let Err(exitcode) = scanner.tokenize() {
                 return exitcode;
             }
