@@ -3,6 +3,9 @@ use std::{env, fs, process::ExitCode};
 mod parser;
 use parser::Parser;
 
+mod runner;
+use runner::Runner;
+
 mod scanner;
 use scanner::Scanner;
 
@@ -76,11 +79,9 @@ fn main() -> ExitCode {
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
-            let stmts = parser.statements();
-            for stmt in stmts {
-                if let Err(exitcode) = stmt.run() {
-                    return exitcode;
-                }
+            let runner = Runner::new(parser.statements());
+            if let Err(exitcode) = runner.run() {
+                return exitcode;
             }
             ExitCode::SUCCESS
         }

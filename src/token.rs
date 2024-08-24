@@ -112,6 +112,7 @@ impl Display for Token {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Grouping(Box<Expr>),
@@ -156,7 +157,7 @@ impl Display for Value {
 }
 
 impl Expr {
-    fn evaluate(&self) -> Result<Value, ExitCode> {
+    pub fn evaluate(&self) -> Result<Value, ExitCode> {
         match self {
             Expr::Binary(left, operator, right) => {
                 let left = left.evaluate()?;
@@ -254,6 +255,7 @@ impl Expr {
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
+    Var(String, Expr),
 }
 
 impl Display for Stmt {
@@ -261,6 +263,7 @@ impl Display for Stmt {
         match self {
             Stmt::Expr(expr) => write!(f, "{}", expr),
             Stmt::Print(expr) => write!(f, "print {};", expr),
+            Stmt::Var(var, expr) => write!(f, "var {} = {};", var, expr),
         }
     }
 }
@@ -271,23 +274,9 @@ impl Stmt {
             "{}",
             match self {
                 Stmt::Expr(expr) => expr.evaluate()?,
-                Stmt::Print(expr) => expr.evaluate()?,
+                Stmt::Print(_) | Stmt::Var(_, _) => unreachable!(),
             }
         );
-
-        Ok(())
-    }
-
-    pub fn run(&self) -> Result<(), ExitCode> {
-        match self {
-            Stmt::Expr(expr) => {
-                expr.evaluate()?;
-            }
-            Stmt::Print(expr) => {
-                let value = expr.evaluate()?;
-                println!("{}", value);
-            }
-        }
         Ok(())
     }
 }

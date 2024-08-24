@@ -15,6 +15,18 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
+    pub fn new(source: &'a str) -> Self {
+        Self {
+            source,
+            chars: source.chars().peekable(),
+            tokens: vec![],
+            start: 0,
+            current: 0,
+            line: 1,
+            error: false,
+        }
+    }
+
     fn advance(&mut self) -> Option<char> {
         if let Some(c) = self.chars.next() {
             self.current += c.len_utf8();
@@ -43,18 +55,6 @@ impl<'a> Scanner<'a> {
     fn error(&mut self, line: usize, message: &str) {
         eprintln!("[line {}] Error: {}", line, message);
         self.error = true;
-    }
-
-    pub fn new(source: &'a str) -> Self {
-        Self {
-            source,
-            chars: source.chars().peekable(),
-            tokens: vec![],
-            start: 0,
-            current: 0,
-            line: 1,
-            error: false,
-        }
     }
 
     pub fn tokens(&self) -> &[Token] {

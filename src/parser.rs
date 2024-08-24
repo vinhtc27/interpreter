@@ -2,7 +2,6 @@ use std::process::ExitCode;
 
 use crate::token::{Expr, Stmt, Token, TokenType};
 
-#[derive(Default)]
 pub struct Parser<'a> {
     tokens: &'a [Token],
     stmts: Vec<Stmt>,
@@ -13,7 +12,7 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn new(tokens: &'a [Token], run: bool) -> Self {
-        Parser {
+        Self {
             tokens,
             stmts: vec![],
             current: 0,
@@ -28,7 +27,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
-            if let Ok(stmt) = self.statement() {
+            if let Ok(stmt) = self.parse_statement() {
                 self.stmts.push(stmt);
             }
         }
@@ -39,9 +38,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn statement(&mut self) -> Result<Stmt, ()> {
+    fn parse_statement(&mut self) -> Result<Stmt, ()> {
         if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_tokens(&[TokenType::Var]) {
+            self.var_statement()
         } else {
             self.expression_statement()
         }
@@ -53,6 +54,26 @@ impl<'a> Parser<'a> {
             self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
         }
         Ok(Stmt::Print(value))
+    }
+
+    fn var_statement(&mut self) -> Result<Stmt, ()> {
+        let name = self.consume(TokenType::Identifier, "Expect variable name.")?;
+        let value = if self.match_tokens(&[TokenType::Equal]) {
+            self.express()?
+        } else {
+            Expr::Literal(Token {
+                token_type: TokenType::Nil,
+                lexeme: "nil".to_string(),
+                line: self.line(),
+            })
+        };
+        if self.run {
+            self.consume(
+                TokenType::SemiColon,
+                "Expect ';' after variable declaration.",
+            )?;
+        }
+        Ok(Stmt::Var(name.lexeme, value))
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ()> {
