@@ -8,15 +8,17 @@ pub struct Parser<'a> {
     statements: Vec<Statement>,
     current: usize,
     error: bool,
+    run: bool,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a [Token]) -> Self {
+    pub fn new(tokens: &'a [Token], run: bool) -> Self {
         Parser {
             tokens,
             statements: vec![],
             current: 0,
             error: false,
+            run,
         }
     }
 
@@ -47,13 +49,17 @@ impl<'a> Parser<'a> {
 
     fn print_statement(&mut self) -> Result<Statement, ()> {
         let value = self.express()?;
-        self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+        if self.run {
+            self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+        }
         Ok(Statement::Print(value))
     }
 
     fn expression_statement(&mut self) -> Result<Statement, ()> {
         let expr = self.express()?;
-        self.consume(TokenType::SemiColon, "Expect ';' after expression.")?;
+        if self.run {
+            self.consume(TokenType::SemiColon, "Expect ';' after expression.")?;
+        }
         Ok(Statement::Expr(expr))
     }
 
