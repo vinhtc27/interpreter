@@ -52,11 +52,28 @@ fn main() -> ExitCode {
             }
             ExitCode::SUCCESS
         }
-        "evaluate" | "run" => {
+        "evaluate" => {
             if let Err(exitcode) = scanner.tokenize() {
                 return exitcode;
             }
             let mut parser = Parser::new(scanner.tokens(), false);
+            if let Err(exitcode) = parser.parse() {
+                return exitcode;
+            }
+            let stmts = parser.statements();
+            for stmt in stmts {
+                match stmt.run() {
+                    Ok(value) => println!("{}", value),
+                    Err(exitcode) => return exitcode,
+                }
+            }
+            ExitCode::SUCCESS
+        }
+        "run" => {
+            if let Err(exitcode) = scanner.tokenize() {
+                return exitcode;
+            }
+            let mut parser = Parser::new(scanner.tokens(), true);
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
