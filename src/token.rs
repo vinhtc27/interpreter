@@ -280,7 +280,9 @@ impl Stmt {
 
     pub fn run(&self) -> Result<(), ExitCode> {
         match self {
-            Stmt::Expr(_) => {}
+            Stmt::Expr(expr) => {
+                expr.evaluate()?;
+            }
             Stmt::Print(expr) => {
                 let value = expr.evaluate()?;
                 println!("{}", value);

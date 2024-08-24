@@ -62,7 +62,9 @@ fn main() -> ExitCode {
             }
             let stmts = parser.statements();
             for stmt in stmts {
-                let _ = stmt.evaluate();
+                if let Err(exitcode) = stmt.evaluate() {
+                    return exitcode;
+                }
             }
             ExitCode::SUCCESS
         }
@@ -76,7 +78,9 @@ fn main() -> ExitCode {
             }
             let stmts = parser.statements();
             for stmt in stmts {
-                let _ = stmt.run();
+                if let Err(exitcode) = stmt.run() {
+                    return exitcode;
+                }
             }
             ExitCode::SUCCESS
         }
