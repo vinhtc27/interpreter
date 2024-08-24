@@ -62,10 +62,7 @@ fn main() -> ExitCode {
             }
             let stmts = parser.statements();
             for stmt in stmts {
-                match stmt.run() {
-                    Ok(value) => println!("{}", value),
-                    Err(exitcode) => return exitcode,
-                }
+                let _ = stmt.evaluate();
             }
             ExitCode::SUCCESS
         }
@@ -79,10 +76,7 @@ fn main() -> ExitCode {
             }
             let stmts = parser.statements();
             for stmt in stmts {
-                match stmt.run() {
-                    Ok(value) => println!("{}", value),
-                    Err(exitcode) => return exitcode,
-                }
+                let _ = stmt.run();
             }
             ExitCode::SUCCESS
         }
