@@ -263,7 +263,8 @@ impl Expr {
 pub enum Stmt {
     Expr(Expr),
     Print(Expr),
-    Var(String, Expr),
+    Declare(String, Expr),
+    Assign(String, Expr),
 }
 
 impl Display for Stmt {
@@ -271,7 +272,8 @@ impl Display for Stmt {
         match self {
             Stmt::Expr(expr) => write!(f, "{}", expr),
             Stmt::Print(expr) => write!(f, "print {};", expr),
-            Stmt::Var(var, expr) => write!(f, "var {} = {};", var, expr),
+            Stmt::Declare(var, expr) => write!(f, "var {} = {};", var, expr),
+            Stmt::Assign(var, expr) => write!(f, "{} = {};", var, expr),
         }
     }
 }

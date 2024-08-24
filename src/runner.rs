@@ -17,7 +17,7 @@ impl<'a> Runner<'a> {
                 "{}",
                 match stmt {
                     Stmt::Expr(expr) => expr.evaluate(&HashMap::new())?,
-                    Stmt::Print(_) | Stmt::Var(_, _) => unreachable!(),
+                    Stmt::Print(_) | Stmt::Declare(_, _) | Stmt::Assign(_, _) => unreachable!(),
                 }
             );
         }
@@ -39,7 +39,7 @@ impl<'a> Runner<'a> {
                     };
                     println!("{}", value);
                 }
-                Stmt::Var(var, expr) => {
+                Stmt::Declare(var, expr) | Stmt::Assign(var, expr) => {
                     if *var != expr.to_string() {
                         vars.insert(var.clone(), expr.clone());
                     }

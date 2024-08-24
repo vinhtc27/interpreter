@@ -43,6 +43,8 @@ impl<'a> Parser<'a> {
             self.print_statement()
         } else if self.match_tokens(&[TokenType::Var]) {
             self.var_statement()
+        } else if self.match_tokens(&[TokenType::Identifier]) {
+            self.assign_statement()
         } else {
             self.expression_statement()
         }
@@ -73,7 +75,17 @@ impl<'a> Parser<'a> {
                 "Expect ';' after variable declaration.",
             )?;
         }
-        Ok(Stmt::Var(name.lexeme, value))
+        Ok(Stmt::Declare(name.lexeme, value))
+    }
+
+    fn assign_statement(&mut self) -> Result<Stmt, ()> {
+        let name = self.previous();
+        self.consume(TokenType::Equal, "Expect '=' after variable name.")?;
+        let value = self.express()?;
+        if self.run {
+            self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+        }
+        Ok(Stmt::Assign(name.lexeme, value))
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ()> {
