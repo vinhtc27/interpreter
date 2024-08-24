@@ -27,20 +27,7 @@ fn main() -> ExitCode {
 
     let mut scanner = Scanner::new(&file_contents);
     match command.as_str() {
-        "tokenize" => {
-            if let Err(exitcode) = scanner.tokenize() {
-                for token in scanner.tokens() {
-                    println!("{}", token);
-                }
-                exitcode
-            } else {
-                for token in scanner.tokens() {
-                    println!("{}", token);
-                }
-                ExitCode::SUCCESS
-            }
-        }
-        "parse" => {
+        "run" => {
             if let Err(exitcode) = scanner.tokenize() {
                 return exitcode;
             }
@@ -48,23 +35,9 @@ fn main() -> ExitCode {
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
-            let exprs = parser.expressions();
-            for expr in exprs {
-                println!("{}", expr);
-            }
-            ExitCode::SUCCESS
-        }
-        "evaluate" => {
-            if let Err(exitcode) = scanner.tokenize() {
-                return exitcode;
-            }
-            let mut parser = Parser::new(scanner.tokens());
-            if let Err(exitcode) = parser.parse() {
-                return exitcode;
-            }
-            let exprs = parser.expressions();
-            for expr in exprs {
-                match expr.evaluate() {
+            let statements = parser.statements();
+            for statement in statements {
+                match statement.evaluate() {
                     Ok(value) => println!("{}", value),
                     Err(exitcode) => return exitcode,
                 }

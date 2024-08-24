@@ -156,7 +156,7 @@ impl Display for Value {
 }
 
 impl Expr {
-    pub fn evaluate(&self) -> Result<Value, ExitCode> {
+    fn evaluate(&self) -> Result<Value, ExitCode> {
         match self {
             Expr::Binary(left, operator, right) => {
                 let left = left.evaluate()?;
@@ -246,6 +246,32 @@ impl Expr {
                     }
                     _ => Err(ExitCode::from(65)),
                 }
+            }
+        }
+    }
+}
+
+pub enum Statement {
+    Expr(Expr),
+    Print(Expr),
+}
+
+impl Display for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Statement::Expr(expr) => write!(f, "{};", expr),
+            Statement::Print(expr) => write!(f, "print {};", expr),
+        }
+    }
+}
+
+impl Statement {
+    pub fn evaluate(&self) -> Result<Value, ExitCode> {
+        match self {
+            Statement::Expr(expr) => expr.evaluate(),
+            Statement::Print(expr) => {
+                let value = expr.evaluate()?;
+                Ok(value)
             }
         }
     }

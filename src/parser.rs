@@ -1,16 +1,62 @@
 use std::process::ExitCode;
 
-use crate::token::{Expr, Token, TokenType};
+use crate::token::{Expr, Statement, Token, TokenType};
 
 #[derive(Default)]
 pub struct Parser<'a> {
     tokens: &'a [Token],
-    exprs: Vec<Expr>,
+    statements: Vec<Statement>,
     current: usize,
     error: bool,
 }
 
 impl<'a> Parser<'a> {
+    pub fn new(tokens: &'a [Token]) -> Self {
+        Parser {
+            tokens,
+            statements: vec![],
+            current: 0,
+            error: false,
+        }
+    }
+
+    pub fn statements(&self) -> &[Statement] {
+        &self.statements
+    }
+
+    pub fn parse(&mut self) -> Result<(), ExitCode> {
+        while !self.is_eof() {
+            if let Ok(stmt) = self.statement() {
+                self.statements.push(stmt);
+            }
+        }
+        if self.error {
+            Err(ExitCode::from(65))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn statement(&mut self) -> Result<Statement, ()> {
+        if self.match_tokens(&[TokenType::Print]) {
+            self.print_statement()
+        } else {
+            self.expression_statement()
+        }
+    }
+
+    fn print_statement(&mut self) -> Result<Statement, ()> {
+        let value = self.express()?;
+        self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+        Ok(Statement::Print(value))
+    }
+
+    fn expression_statement(&mut self) -> Result<Statement, ()> {
+        let expr = self.express()?;
+        self.consume(TokenType::SemiColon, "Expect ';' after expression.")?;
+        Ok(Statement::Expr(expr))
+    }
+
     fn peek(&self) -> &Token {
         &self.tokens[self.current]
     }
@@ -166,7 +212,6 @@ impl<'a> Parser<'a> {
             TokenType::While,
             TokenType::Identifier,
         ]) {
-            // self.advance();
             return Ok(Expr::Literal(self.previous()));
         }
 
@@ -213,31 +258,5 @@ impl<'a> Parser<'a> {
 
     fn previous(&self) -> Token {
         self.tokens[self.current - 1].clone()
-    }
-
-    pub fn new(tokens: &'a [Token]) -> Self {
-        Parser {
-            tokens,
-            exprs: vec![],
-            current: 0,
-            error: false,
-        }
-    }
-
-    pub fn expressions(&self) -> &[Expr] {
-        &self.exprs
-    }
-
-    pub fn parse(&mut self) -> Result<(), ExitCode> {
-        while !self.is_eof() {
-            if let Ok(expr) = self.express() {
-                self.exprs.push(expr);
-            }
-        }
-        if self.error {
-            Err(ExitCode::from(65))
-        } else {
-            Ok(())
-        }
     }
 }
