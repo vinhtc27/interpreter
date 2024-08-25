@@ -1,10 +1,10 @@
-use std::{env, fs, process::ExitCode};
+use std::{env as StdEnv, fs, process::ExitCode};
 
 mod parser;
 use parser::Parser;
 
-mod runner;
-use runner::Runner;
+mod env;
+use env::Env;
 
 mod scanner;
 use scanner::Scanner;
@@ -12,7 +12,7 @@ use scanner::Scanner;
 mod token;
 
 fn main() -> ExitCode {
-    let args = env::args().collect::<Vec<_>>();
+    let args = StdEnv::args().collect::<Vec<_>>();
     if args.len() < 3 {
         eprintln!("Usage: {} tokenize <filename>", args[0]);
         return ExitCode::SUCCESS;
@@ -63,9 +63,11 @@ fn main() -> ExitCode {
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
-            let runner = Runner::new(parser.statements());
-            if let Err(exitcode) = runner.evaluate() {
-                return exitcode;
+            let statements = parser.statements();
+            for statement in statements {
+                if let Err(exitcode) = statement.evaluate_no_run() {
+                    return exitcode;
+                }
             }
             ExitCode::SUCCESS
         }
@@ -77,9 +79,12 @@ fn main() -> ExitCode {
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
-            let runner = Runner::new(parser.statements());
-            if let Err(exitcode) = runner.run() {
-                return exitcode;
+            let mut env = Env::new();
+            let statements = parser.statements();
+            for statement in statements {
+                if let Err(exitcode) = statement.evaluate(&mut env) {
+                    return exitcode;
+                }
             }
             ExitCode::SUCCESS
         }

@@ -1,4 +1,6 @@
-use std::{collections::HashMap, fmt::Display, process::ExitCode};
+use std::{fmt::Display, process::ExitCode};
+
+use crate::env::Env;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
@@ -157,11 +159,11 @@ impl Display for Value {
 }
 
 impl Expr {
-    pub fn evaluate(&self, vars: &HashMap<String, Value>) -> Result<Value, ExitCode> {
+    pub fn evaluate(&self, environment: &Env) -> Result<Value, ExitCode> {
         match self {
             Expr::Binary(left, operator, right) => {
-                let left = left.evaluate(vars)?;
-                let right = right.evaluate(vars)?;
+                let left = left.evaluate(environment)?;
+                let right = right.evaluate(environment)?;
                 match (&operator.token_type, left, right) {
                     (TokenType::Plus, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l + r))
@@ -213,25 +215,18 @@ impl Expr {
                     _ => Err(ExitCode::from(65)),
                 }
             }
-            Expr::Grouping(expr) => expr.evaluate(vars),
+            Expr::Grouping(expr) => expr.evaluate(environment),
             Expr::Literal(token) => match &token.token_type {
                 TokenType::Number(n) => Ok(Value::Number(*n)),
                 TokenType::String(s) => Ok(Value::String(s.clone())),
                 TokenType::True => Ok(Value::Boolean(true)),
                 TokenType::False => Ok(Value::Boolean(false)),
                 TokenType::Nil => Ok(Value::Nil),
-                TokenType::Identifier => {
-                    if let Some(value) = vars.get(&token.lexeme) {
-                        Ok(value.clone())
-                    } else {
-                        eprintln!("Undefined variable '{}'.", token.lexeme);
-                        return Err(ExitCode::from(70));
-                    }
-                }
+                TokenType::Identifier => environment.get(&token.lexeme),
                 _ => Err(ExitCode::from(65)),
             },
             Expr::Unary(operator, expr) => {
-                let expr = expr.evaluate(vars)?;
+                let expr = expr.evaluate(environment)?;
                 match operator.token_type {
                     TokenType::Minus => {
                         if let Value::Number(n) = expr {
@@ -265,6 +260,7 @@ pub enum Stmt {
     Declare(String, Box<Stmt>),
     Assign(String, Box<Stmt>),
     Expr(Expr),
+    Block(Vec<Stmt>),
 }
 
 impl Display for Stmt {
@@ -274,26 +270,53 @@ impl Display for Stmt {
             Stmt::Declare(var, expr) => write!(f, "var {} = {}", var, expr),
             Stmt::Assign(vars, expr) => write!(f, "{} = {}", vars, expr),
             Stmt::Expr(expr) => write!(f, "{}", expr),
+            Stmt::Block(stmts) => {
+                for stmt in stmts {
+                    writeln!(f, "{}", stmt)?;
+                }
+                Ok(())
+            }
         }
     }
 }
 
 impl Stmt {
-    pub fn evaluate(&self, vars: &mut HashMap<String, Value>) -> Result<Value, ExitCode> {
+    pub fn evaluate_no_run(&self) -> Result<Value, ExitCode> {
         match self {
-            Stmt::Print(stmt) => {
-                let value = stmt.evaluate(vars)?;
+            Stmt::Expr(expr) => {
+                let value = expr.evaluate(&Env::new())?;
                 println!("{}", value);
                 Ok(value)
             }
-            Stmt::Declare(var, stmt) | Stmt::Assign(var, stmt) => {
-                let value = stmt.evaluate(vars)?;
-                if *var != value.to_string() {
-                    vars.insert(var.clone(), value.clone());
+            _ => Err(ExitCode::from(65)),
+        }
+    }
+
+    pub fn evaluate(&self, environment: &mut Env) -> Result<Value, ExitCode> {
+        match self {
+            Stmt::Block(statements) => {
+                let mut block_env = Env::with_enclosing(environment.clone());
+                for stmt in statements {
+                    stmt.evaluate(&mut block_env)?;
                 }
+                Ok(Value::Nil)
+            }
+            Stmt::Print(expr) => {
+                let value = expr.evaluate(environment)?;
+                println!("{}", value);
+                Ok(Value::Nil)
+            }
+            Stmt::Declare(var, expr) => {
+                let value = expr.evaluate(environment)?;
+                environment.define(var.clone(), value);
+                Ok(Value::Nil)
+            }
+            Stmt::Assign(var, expr) => {
+                let value = expr.evaluate(environment)?;
+                environment.assign(var, value.clone())?;
                 Ok(value)
             }
-            Stmt::Expr(expr) => expr.evaluate(vars),
+            Stmt::Expr(expr) => expr.evaluate(environment),
         }
     }
 }

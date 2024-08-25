@@ -37,7 +37,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_statement(&mut self) -> Result<Stmt, ()> {
-        if self.match_tokens(&[TokenType::Print]) {
+        if self.match_tokens(&[TokenType::LeftBrace]) {
+            self.block_statement()
+        } else if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
         } else if self.match_tokens(&[TokenType::Var]) {
             self.declare_statement()
@@ -48,10 +50,19 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn block_statement(&mut self) -> Result<Stmt, ()> {
+        let mut statements = Vec::new();
+        while !self.check(&TokenType::RightBrace) && !self.is_eof() {
+            statements.push(self.parse_statement()?);
+        }
+        self.consume(TokenType::RightBrace, "Expect '}' .")?;
+        Ok(Stmt::Block(statements))
+    }
+
     fn print_statement(&mut self) -> Result<Stmt, ()> {
         let stmt = self.parse_statement()?;
         if self.peek().token_type == TokenType::SemiColon {
-            self.consume(TokenType::SemiColon, "Expect ';' after print value.")?;
+            self.consume(TokenType::SemiColon, "")?;
         }
         Ok(Stmt::Print(Box::new(stmt)))
     }
@@ -68,10 +79,7 @@ impl<'a> Parser<'a> {
             }))
         };
         if self.peek().token_type == TokenType::SemiColon {
-            self.consume(
-                TokenType::SemiColon,
-                "Expect ';' after variable declaration.",
-            )?;
+            self.consume(TokenType::SemiColon, "")?;
         }
         Ok(Stmt::Declare(var.lexeme, Box::new(stmt)))
     }
@@ -80,11 +88,11 @@ impl<'a> Parser<'a> {
         let var = self.previous();
         match self.peek().token_type {
             TokenType::SemiColon => {
-                self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+                self.consume(TokenType::SemiColon, "")?;
                 Ok(Stmt::Expr(Expr::Literal(var)))
             }
             TokenType::Equal => {
-                self.consume(TokenType::Equal, "Expect '=' after variable name.")?;
+                self.consume(TokenType::Equal, "")?;
                 let stmt = self.parse_statement()?;
                 Ok(Stmt::Assign(var.lexeme, Box::new(stmt)))
             }
