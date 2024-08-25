@@ -157,7 +157,7 @@ impl Display for Value {
 }
 
 impl Expr {
-    pub fn evaluate(&self, vars: &HashMap<String, Expr>) -> Result<Value, ExitCode> {
+    pub fn evaluate(&self, vars: &HashMap<String, Value>) -> Result<Value, ExitCode> {
         match self {
             Expr::Binary(left, operator, right) => {
                 let left = left.evaluate(vars)?;
@@ -221,8 +221,8 @@ impl Expr {
                 TokenType::False => Ok(Value::Boolean(false)),
                 TokenType::Nil => Ok(Value::Nil),
                 TokenType::Identifier => {
-                    if let Some(expr) = vars.get(&token.lexeme) {
-                        expr.evaluate(vars)
+                    if let Some(value) = vars.get(&token.lexeme) {
+                        Ok(value.clone())
                     } else {
                         eprintln!("Undefined variable '{}'.", token.lexeme);
                         return Err(ExitCode::from(70));
@@ -261,19 +261,39 @@ impl Expr {
 }
 
 pub enum Stmt {
+    Print(Box<Stmt>),
+    Declare(String, Box<Stmt>),
+    Assign(String, Box<Stmt>),
     Expr(Expr),
-    Print(Expr),
-    Declare(String, Expr),
-    Assign(String, Expr),
 }
 
 impl Display for Stmt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Stmt::Print(expr) => write!(f, "print {}", expr),
+            Stmt::Declare(var, expr) => write!(f, "var {} = {}", var, expr),
+            Stmt::Assign(vars, expr) => write!(f, "{} = {}", vars, expr),
             Stmt::Expr(expr) => write!(f, "{}", expr),
-            Stmt::Print(expr) => write!(f, "print {};", expr),
-            Stmt::Declare(var, expr) => write!(f, "var {} = {};", var, expr),
-            Stmt::Assign(var, expr) => write!(f, "{} = {};", var, expr),
+        }
+    }
+}
+
+impl Stmt {
+    pub fn evaluate(&self, vars: &mut HashMap<String, Value>) -> Result<Value, ExitCode> {
+        match self {
+            Stmt::Print(stmt) => {
+                let value = stmt.evaluate(vars)?;
+                println!("{}", value);
+                Ok(value)
+            }
+            Stmt::Declare(var, stmt) | Stmt::Assign(var, stmt) => {
+                let value = stmt.evaluate(vars)?;
+                if *var != value.to_string() {
+                    vars.insert(var.clone(), value.clone());
+                }
+                Ok(value)
+            }
+            Stmt::Expr(expr) => expr.evaluate(vars),
         }
     }
 }

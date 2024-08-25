@@ -7,17 +7,15 @@ pub struct Parser<'a> {
     stmts: Vec<Stmt>,
     current: usize,
     error: bool,
-    run: bool,
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a [Token], run: bool) -> Self {
+    pub fn new(tokens: &'a [Token]) -> Self {
         Self {
             tokens,
             stmts: vec![],
             current: 0,
             error: false,
-            run,
         }
     }
 
@@ -42,7 +40,7 @@ impl<'a> Parser<'a> {
         if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
         } else if self.match_tokens(&[TokenType::Var]) {
-            self.var_statement()
+            self.declare_statement()
         } else if self.match_tokens(&[TokenType::Identifier]) {
             self.assign_statement()
         } else {
@@ -51,46 +49,55 @@ impl<'a> Parser<'a> {
     }
 
     fn print_statement(&mut self) -> Result<Stmt, ()> {
-        let value = self.express()?;
-        if self.run {
-            self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+        let stmt = self.parse_statement()?;
+        if self.peek().token_type == TokenType::SemiColon {
+            self.consume(TokenType::SemiColon, "Expect ';' after print value.")?;
         }
-        Ok(Stmt::Print(value))
+        Ok(Stmt::Print(Box::new(stmt)))
     }
 
-    fn var_statement(&mut self) -> Result<Stmt, ()> {
-        let name = self.consume(TokenType::Identifier, "Expect variable name.")?;
-        let value = if self.match_tokens(&[TokenType::Equal]) {
-            self.express()?
+    fn declare_statement(&mut self) -> Result<Stmt, ()> {
+        let var = self.consume(TokenType::Identifier, "Expect variable name.")?;
+        let stmt = if self.match_tokens(&[TokenType::Equal]) {
+            self.parse_statement()?
         } else {
-            Expr::Literal(Token {
+            Stmt::Expr(Expr::Literal(Token {
                 token_type: TokenType::Nil,
                 lexeme: "nil".to_string(),
                 line: self.line(),
-            })
+            }))
         };
-        if self.run {
+        if self.peek().token_type == TokenType::SemiColon {
             self.consume(
                 TokenType::SemiColon,
                 "Expect ';' after variable declaration.",
             )?;
         }
-        Ok(Stmt::Declare(name.lexeme, value))
+        Ok(Stmt::Declare(var.lexeme, Box::new(stmt)))
     }
 
     fn assign_statement(&mut self) -> Result<Stmt, ()> {
-        let name = self.previous();
-        self.consume(TokenType::Equal, "Expect '=' after variable name.")?;
-        let value = self.express()?;
-        if self.run {
-            self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+        let var = self.previous();
+        match self.peek().token_type {
+            TokenType::SemiColon => {
+                self.consume(TokenType::SemiColon, "Expect ';' after value.")?;
+                Ok(Stmt::Expr(Expr::Literal(var)))
+            }
+            TokenType::Equal => {
+                self.consume(TokenType::Equal, "Expect '=' after variable name.")?;
+                let stmt = self.parse_statement()?;
+                Ok(Stmt::Assign(var.lexeme, Box::new(stmt)))
+            }
+            _ => {
+                self.retreat();
+                Ok(self.expression_statement()?)
+            }
         }
-        Ok(Stmt::Assign(name.lexeme, value))
     }
 
     fn expression_statement(&mut self) -> Result<Stmt, ()> {
         let expr = self.express()?;
-        if self.run {
+        if self.peek().token_type == TokenType::SemiColon {
             self.consume(TokenType::SemiColon, "Expect ';' after expression.")?;
         }
         Ok(Stmt::Expr(expr))
@@ -109,6 +116,12 @@ impl<'a> Parser<'a> {
             self.current += 1;
         }
         self.tokens[self.current - 1].clone()
+    }
+
+    fn retreat(&mut self) {
+        if self.current > 0 {
+            self.current -= 1;
+        }
     }
 
     fn express(&mut self) -> Result<Expr, ()> {

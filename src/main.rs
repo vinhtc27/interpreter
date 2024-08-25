@@ -45,7 +45,7 @@ fn main() -> ExitCode {
             if let Err(exitcode) = scanner.tokenize() {
                 return exitcode;
             }
-            let mut parser = Parser::new(scanner.tokens(), false);
+            let mut parser = Parser::new(scanner.tokens());
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
@@ -59,7 +59,7 @@ fn main() -> ExitCode {
             if let Err(exitcode) = scanner.tokenize() {
                 return exitcode;
             }
-            let mut parser = Parser::new(scanner.tokens(), false);
+            let mut parser = Parser::new(scanner.tokens());
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
@@ -73,7 +73,7 @@ fn main() -> ExitCode {
             if let Err(exitcode) = scanner.tokenize() {
                 return exitcode;
             }
-            let mut parser = Parser::new(scanner.tokens(), true);
+            let mut parser = Parser::new(scanner.tokens());
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
