@@ -20,6 +20,13 @@ impl Env {
         }))
     }
 
+    pub fn with_enclosing(enclosing: Arc<RwLock<Env>>) -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Self {
+            values: HashMap::new(),
+            enclosing: Some(enclosing),
+        }))
+    }
+
     pub fn define(&mut self, name: String, value: Value) {
         self.values.insert(name, value);
     }

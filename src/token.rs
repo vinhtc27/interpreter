@@ -370,8 +370,9 @@ impl Stmt {
     pub fn evaluate(&self, environment: Arc<RwLock<Env>>) -> Result<Value, ExitCode> {
         match self {
             Stmt::Block(statements) => {
+                let block_environment = Env::with_enclosing(environment);
                 for stmt in statements {
-                    stmt.evaluate(environment.clone())?;
+                    stmt.evaluate(block_environment.clone())?;
                 }
                 Ok(Value::Nil)
             }
@@ -381,30 +382,33 @@ impl Stmt {
                 Ok(Value::Nil)
             }
             Stmt::While(condition, body) => {
-                while let Ok(Value::Boolean(true)) = condition.evaluate(environment.clone()) {
-                    body.evaluate(environment.clone())?;
+                let while_environment = Env::with_enclosing(environment);
+                while let Ok(Value::Boolean(true)) = condition.evaluate(while_environment.clone()) {
+                    body.evaluate(while_environment.clone())?;
                 }
                 Ok(Value::Nil)
             }
             Stmt::For(init, condition, increment, body) => {
+                let for_environment = Env::with_enclosing(environment);
                 if let Some(init) = init {
-                    init.evaluate(environment.clone())?;
+                    init.evaluate(for_environment.clone())?;
                 }
 
                 match condition {
                     Some(condition) => {
-                        while let Ok(Value::Boolean(true)) = condition.evaluate(environment.clone())
+                        while let Ok(Value::Boolean(true)) =
+                            condition.evaluate(for_environment.clone())
                         {
-                            body.evaluate(environment.clone())?;
+                            body.evaluate(for_environment.clone())?;
                             if let Some(increment) = increment {
-                                increment.evaluate(environment.clone())?;
+                                increment.evaluate(for_environment.clone())?;
                             }
                         }
                     }
                     None => {
-                        while let Ok(_) = body.evaluate(environment.clone()) {
+                        while let Ok(_) = body.evaluate(for_environment.clone()) {
                             if let Some(increment) = increment {
-                                increment.evaluate(environment.clone())?;
+                                increment.evaluate(for_environment.clone())?;
                             }
                         }
                     }
