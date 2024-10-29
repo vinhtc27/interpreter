@@ -26,6 +26,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
             if let Ok(stmt) = self.parse_statement() {
+                println!("{}", stmt);
                 if let Stmt::Or(_) = stmt {
                     self.stmts.pop();
                 }
