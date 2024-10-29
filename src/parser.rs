@@ -42,10 +42,10 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Stmt, ()> {
         if self.match_tokens(&[TokenType::LeftBrace]) {
             self.block_statement()
-        } else if self.match_tokens(&[TokenType::Or]) {
-            self.or_statement()
         } else if self.match_tokens(&[TokenType::LeftParen]) {
             self.group_statement()
+        } else if self.match_tokens(&[TokenType::Or]) {
+            self.or_statement()
         } else if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
         } else if self.match_tokens(&[TokenType::If]) {
@@ -68,6 +68,11 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Block(stmts))
     }
 
+    fn group_statement(&mut self) -> Result<Stmt, ()> {
+        let stmt = self.parse_statement()?;
+        self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
+        Ok(Stmt::Group(Box::new(stmt)))
+    }
     fn or_statement(&mut self) -> Result<Stmt, ()> {
         let mut stmts = vec![self
             .statements()
@@ -83,12 +88,6 @@ impl<'a> Parser<'a> {
             self.consume(TokenType::SemiColon, "")?;
         }
         Ok(Stmt::Or(stmts))
-    }
-
-    fn group_statement(&mut self) -> Result<Stmt, ()> {
-        let stmt = self.parse_statement()?;
-        self.consume(TokenType::RightParen, "Expect ')' .")?;
-        Ok(Stmt::Group(Box::new(stmt)))
     }
 
     fn print_statement(&mut self) -> Result<Stmt, ()> {
@@ -183,7 +182,19 @@ impl<'a> Parser<'a> {
     }
 
     fn express(&mut self) -> Result<Expr, ()> {
-        self.or()
+        self.assign()
+    }
+
+    fn assign(&mut self) -> Result<Expr, ()> {
+        let mut expr = self.or()?;
+
+        while self.match_tokens(&[TokenType::Equal]) {
+            let operator = self.previous();
+            let right = self.and()?;
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+        }
+
+        Ok(expr)
     }
 
     fn or(&mut self) -> Result<Expr, ()> {
@@ -292,18 +303,6 @@ impl<'a> Parser<'a> {
                     line: self.previous().line,
                 }));
             }
-        }
-
-        if self.match_tokens(&[TokenType::LeftParen]) {
-            let expr = self.express()?;
-            self.consume(TokenType::RightParen, "Unmatched parentheses.")?;
-            return Ok(Expr::Grouping(Box::new(expr)));
-        }
-
-        if self.match_tokens(&[TokenType::LeftBrace]) {
-            let expr = self.express()?;
-            self.consume(TokenType::RightBrace, "Unmatched brace.")?;
-            return Ok(Expr::Grouping(Box::new(expr)));
         }
 
         if self.match_tokens(&[

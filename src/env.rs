@@ -38,7 +38,7 @@ impl Env {
         } else if let Some(ref mut enclosing) = self.enclosing {
             enclosing.write().unwrap().assign(name, value)
         } else {
-            eprintln!("Undefined variable '{}'.", name);
+            eprintln!("Undefined assign variable '{}'.", name);
             return Err(ExitCode::from(70));
         }
     }
@@ -49,7 +49,7 @@ impl Env {
         } else if let Some(ref enclosing) = self.enclosing {
             enclosing.read().unwrap().get(name)
         } else {
-            eprintln!("Undefined variable '{}'.", name);
+            eprintln!("Undefined get variable '{}'.", name);
             return Err(ExitCode::from(70));
         }
     }

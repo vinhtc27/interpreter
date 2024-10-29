@@ -121,7 +121,6 @@ impl Display for Token {
 #[derive(Debug, Clone)]
 pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
-    Grouping(Box<Expr>),
     Literal(Token),
     Unary(Token, Box<Expr>),
 }
@@ -132,13 +131,12 @@ impl Display for Expr {
             Expr::Binary(left, operator, right) => {
                 write!(f, "({} {} {})", operator.lexeme, left, right)
             }
-            Expr::Grouping(expr) => write!(f, "(group {expr})"),
             Expr::Literal(token) => match &token.token_type {
                 TokenType::String(s) => write!(f, "{}", s),
-                TokenType::Number(n) => write!(f, "{:?}", n),
+                TokenType::Number(n) => write!(f, "{}", n),
                 _ => write!(f, "{}", token.lexeme),
             },
-            Expr::Unary(operator, expr) => write!(f, "({} {expr})", operator.lexeme),
+            Expr::Unary(operator, expr) => write!(f, "({} {})", operator.lexeme, expr),
         }
     }
 }
@@ -165,9 +163,9 @@ impl Display for Value {
 impl Expr {
     pub fn evaluate(&self, environment: Arc<RwLock<Env>>) -> Result<Value, ExitCode> {
         match self {
-            Expr::Binary(left, operator, right) => {
-                let left = left.evaluate(environment.clone())?;
-                let right = right.evaluate(environment)?;
+            Expr::Binary(left_side, operator, right) => {
+                let left = left_side.evaluate(environment.clone())?;
+                let right = right.evaluate(environment.clone())?;
                 match (&operator.token_type, &left, &right) {
                     (TokenType::Or, Value::Boolean(l), Value::Boolean(r)) => {
                         Ok(Value::Boolean(*l || *r))
@@ -222,10 +220,12 @@ impl Expr {
                     }
                     (TokenType::EqualEqual, l, r) => Ok(Value::Boolean(l == r)),
                     (TokenType::BangEqual, l, r) => Ok(Value::Boolean(l != r)),
-                    _ => Err(ExitCode::from(65)),
+                    _ => {
+                        eprintln!("Unsupported binary expression.");
+                        Err(ExitCode::from(65))
+                    }
                 }
             }
-            Expr::Grouping(expr) => expr.evaluate(environment),
             Expr::Literal(token) => match &token.token_type {
                 TokenType::Number(n) => Ok(Value::Number(*n)),
                 TokenType::String(s) => Ok(Value::String(s.clone())),
@@ -233,7 +233,10 @@ impl Expr {
                 TokenType::False => Ok(Value::Boolean(false)),
                 TokenType::Nil => Ok(Value::Nil),
                 TokenType::Identifier => environment.read().unwrap().get(&token.lexeme),
-                _ => Err(ExitCode::from(65)),
+                _ => {
+                    eprintln!("Unsupported literal expression.");
+                    Err(ExitCode::from(65))
+                }
             },
             Expr::Unary(operator, expr) => {
                 let expr = expr.evaluate(environment)?;
@@ -258,7 +261,10 @@ impl Expr {
                             Err(ExitCode::from(65))
                         }
                     }
-                    _ => Err(ExitCode::from(65)),
+                    _ => {
+                        eprintln!("Unsupported unary expression.");
+                        Err(ExitCode::from(65))
+                    }
                 }
             }
         }
@@ -268,8 +274,8 @@ impl Expr {
 #[derive(Clone)]
 pub enum Stmt {
     Block(Vec<Stmt>),
-    Or(Vec<Stmt>),
     Group(Box<Stmt>),
+    Or(Vec<Stmt>),
     Print(Box<Stmt>),
     If(Box<Stmt>, Box<Stmt>, Option<Box<Stmt>>),
     Declare(String, Box<Stmt>),
@@ -280,6 +286,23 @@ pub enum Stmt {
 impl Display for Stmt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Stmt::Block(stmts) => {
+                for stmt in stmts {
+                    writeln!(f, "{{{}}}", stmt)?;
+                }
+                Ok(())
+            }
+            Stmt::Group(stmt) => write!(f, "(group {})", stmt),
+            Stmt::Or(stmts) => {
+                for (i, stmt) in stmts.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " or ")?;
+                    }
+                    write!(f, "{}", stmt)?;
+                }
+                writeln!(f)?;
+                Ok(())
+            }
             Stmt::Print(expr) => write!(f, "print {}", expr),
             Stmt::If(condition, if_branch, else_branch) => {
                 write!(f, "if {} {}", condition, if_branch).and_then(|_| {
@@ -293,23 +316,6 @@ impl Display for Stmt {
             Stmt::Declare(var, expr) => write!(f, "var {} = {}", var, expr),
             Stmt::Assign(var, expr) => write!(f, "{} = {}", var, expr),
             Stmt::Expr(expr) => write!(f, "{}", expr),
-            Stmt::Block(stmts) => {
-                for stmt in stmts {
-                    writeln!(f, "{{{}}}", stmt)?;
-                }
-                Ok(())
-            }
-            Stmt::Or(stmts) => {
-                for (i, stmt) in stmts.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " or ")?;
-                    }
-                    write!(f, "{}", stmt)?;
-                }
-                writeln!(f)?;
-                Ok(())
-            }
-            Stmt::Group(stmt) => write!(f, "({})", stmt),
         }
     }
 }
@@ -335,6 +341,7 @@ impl Stmt {
                 }
                 Ok(Value::Nil)
             }
+            Stmt::Group(statement) => statement.evaluate(environment),
             Stmt::Or(statements) => {
                 for stmt in statements {
                     match stmt.evaluate(environment.clone())? {
@@ -345,10 +352,6 @@ impl Stmt {
                     }
                 }
                 Ok(Value::Nil)
-            }
-            Stmt::Group(statement) => {
-                let value = statement.evaluate(environment)?;
-                Ok(value)
             }
             Stmt::Print(statement) => {
                 let value = statement.evaluate(environment)?;
