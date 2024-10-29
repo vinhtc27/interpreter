@@ -169,42 +169,46 @@ impl Expr {
                 let left = left.evaluate(environment.clone())?;
                 let right = right.evaluate(environment.clone())?;
                 match (&operator.token_type, &left, &right) {
-                    (TokenType::Or, Value::Boolean(l), Value::Boolean(r)) => {
-                        Ok(Value::Boolean(*l || *r))
+                    (TokenType::Or, left, right) => match (left, right) {
+                        (Value::Boolean(true) | Value::Number(_) | Value::String(_), _) => {
+                            Ok(left.clone())
+                        }
+                        (_, Value::Boolean(true) | Value::Number(_) | Value::String(_)) => {
+                            Ok(right.clone())
+                        }
+                        (_, Value::Nil) => Ok(Value::Boolean(false)),
+                        _ => Ok(Value::Boolean(false)),
+                    },
+                    (TokenType::Plus, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Number(left + right))
                     }
-                    (TokenType::Or, Value::Number(_) | Value::String(_), _) => Ok(left),
-                    (TokenType::Or, _, Value::Number(_) | Value::String(_)) => Ok(right),
-                    (TokenType::Or, _, _) => Ok(Value::Boolean(false)),
-                    (TokenType::Plus, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l + r))
-                    }
-                    (TokenType::Plus, Value::String(l), Value::String(r)) => {
-                        Ok(Value::String(l.to_owned() + r))
+                    (TokenType::Plus, Value::String(left), Value::String(right)) => {
+                        Ok(Value::String(left.to_owned() + right))
                     }
                     (TokenType::Plus, _, _) => {
                         eprintln!("Operands must be two numbers or two strings.");
                         Err(ExitCode::from(70))
                     }
-                    (TokenType::Minus, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l - r))
+                    (TokenType::Minus, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Number(left - right))
                     }
-                    (TokenType::Star, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l * r))
+                    (TokenType::Star, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Number(left * right))
                     }
-                    (TokenType::Slash, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Number(l / r))
+                    (TokenType::Slash, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Number(left / right))
                     }
-                    (TokenType::Greater, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l > r))
+                    (TokenType::Greater, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Boolean(left > right))
                     }
-                    (TokenType::GreaterEqual, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l >= r))
+                    (TokenType::GreaterEqual, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Boolean(left >= right))
                     }
-                    (TokenType::Less, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l < r))
+                    (TokenType::Less, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Boolean(left < right))
                     }
-                    (TokenType::LessEqual, Value::Number(l), Value::Number(r)) => {
-                        Ok(Value::Boolean(l <= r))
+                    (TokenType::LessEqual, Value::Number(left), Value::Number(right)) => {
+                        Ok(Value::Boolean(left <= right))
                     }
                     (
                         TokenType::Minus
@@ -220,8 +224,8 @@ impl Expr {
                         eprintln!("Operand must be a number.");
                         Err(ExitCode::from(70))
                     }
-                    (TokenType::EqualEqual, l, r) => Ok(Value::Boolean(l == r)),
-                    (TokenType::BangEqual, l, r) => Ok(Value::Boolean(l != r)),
+                    (TokenType::EqualEqual, left, right) => Ok(Value::Boolean(left == right)),
+                    (TokenType::BangEqual, left, right) => Ok(Value::Boolean(left != right)),
                     _ => {
                         eprintln!("Unsupported binary expression.");
                         Err(ExitCode::from(65))

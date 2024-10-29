@@ -153,19 +153,7 @@ impl<'a> Parser<'a> {
     }
 
     fn express(&mut self) -> Result<Expr, ()> {
-        self.assign()
-    }
-
-    fn assign(&mut self) -> Result<Expr, ()> {
-        let mut expr = self.or()?;
-
-        while self.match_tokens(&[TokenType::Equal]) {
-            let operator = self.previous();
-            let right = self.and()?;
-            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
-        }
-
-        Ok(expr)
+        self.or()
     }
 
     fn or(&mut self) -> Result<Expr, ()> {
@@ -173,8 +161,8 @@ impl<'a> Parser<'a> {
 
         while self.match_tokens(&[TokenType::Or]) {
             let operator = self.previous();
-            let right = self.and()?;
-            expr = Expr::Binary(Box::new(expr), operator, Box::new(right));
+            let left = self.and()?;
+            expr = Expr::Binary(Box::new(left), operator, Box::new(expr));
         }
 
         Ok(expr)
