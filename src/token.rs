@@ -168,22 +168,18 @@ impl Expr {
             Expr::Binary(left, operator, right) => {
                 let left = left.evaluate(environment.clone())?;
                 let right = right.evaluate(environment)?;
-                match (&operator.token_type, left, right) {
+                match (&operator.token_type, &left, &right) {
                     (TokenType::Or, Value::Boolean(l), Value::Boolean(r)) => {
-                        Ok(Value::Boolean(l || r))
+                        Ok(Value::Boolean(*l || *r))
                     }
-                    (TokenType::Or, Value::Number(_) | Value::String(_), _) => {
-                        Ok(Value::Boolean(true))
-                    }
-                    (TokenType::Or, _, Value::Number(_) | Value::String(_)) => {
-                        Ok(Value::Boolean(true))
-                    }
+                    (TokenType::Or, Value::Number(_) | Value::String(_), _) => Ok(left),
+                    (TokenType::Or, _, Value::Number(_) | Value::String(_)) => Ok(right),
                     (TokenType::Or, _, _) => Ok(Value::Boolean(false)),
                     (TokenType::Plus, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l + r))
                     }
                     (TokenType::Plus, Value::String(l), Value::String(r)) => {
-                        Ok(Value::String(l + &r))
+                        Ok(Value::String(l.to_owned() + r))
                     }
                     (TokenType::Plus, _, _) => {
                         eprintln!("Operands must be two numbers or two strings.");
