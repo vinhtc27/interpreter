@@ -104,7 +104,6 @@ impl<'a> Parser<'a> {
         } else {
             Some(self.parse_statement()?)
         };
-        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
         let body = self.parse_statement()?;
         Ok(Stmt::For(
             initializer.map(Box::new),
