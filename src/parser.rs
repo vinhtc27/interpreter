@@ -41,6 +41,8 @@ impl<'a> Parser<'a> {
             self.block_statement()
         } else if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_tokens(&[TokenType::If]) {
+            self.if_statement()
         } else if self.match_tokens(&[TokenType::Var]) {
             self.declare_statement()
         } else if self.match_tokens(&[TokenType::Identifier]) {
@@ -65,6 +67,23 @@ impl<'a> Parser<'a> {
             self.consume(TokenType::SemiColon, "")?;
         }
         Ok(Stmt::Print(Box::new(stmt)))
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, ()> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'if'.")?;
+        let condition = self.express()?;
+        self.consume(TokenType::RightParen, "Expect ')' after if condition.")?;
+        let then_branch = self.parse_statement()?;
+        let else_branch = if self.match_tokens(&[TokenType::Else]) {
+            Some(Box::new(self.parse_statement()?))
+        } else {
+            None
+        };
+        Ok(Stmt::If(
+            Box::new(condition),
+            Box::new(then_branch),
+            else_branch,
+        ))
     }
 
     fn declare_statement(&mut self) -> Result<Stmt, ()> {

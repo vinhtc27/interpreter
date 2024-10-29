@@ -257,6 +257,7 @@ impl Expr {
 
 pub enum Stmt {
     Print(Box<Stmt>),
+    If(Box<Expr>, Box<Stmt>, Option<Box<Stmt>>),
     Declare(String, Box<Stmt>),
     Assign(String, Box<Stmt>),
     Expr(Expr),
@@ -267,6 +268,15 @@ impl Display for Stmt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Stmt::Print(expr) => write!(f, "print {}", expr),
+            Stmt::If(condition, if_branch, else_branch) => {
+                write!(f, "if {} {}", condition, if_branch).and_then(|_| {
+                    if let Some(else_branch) = else_branch {
+                        write!(f, " else {}", else_branch)
+                    } else {
+                        Ok(())
+                    }
+                })
+            }
             Stmt::Declare(var, expr) => write!(f, "var {} = {}", var, expr),
             Stmt::Assign(vars, expr) => write!(f, "{} = {}", vars, expr),
             Stmt::Expr(expr) => write!(f, "{}", expr),
@@ -305,6 +315,16 @@ impl Stmt {
                 let value = expr.evaluate(environment)?;
                 println!("{}", value);
                 Ok(Value::Nil)
+            }
+            Stmt::If(condition, if_branch, else_branch) => {
+                let condition = condition.evaluate(environment)?;
+                if let Value::Boolean(true) = condition {
+                    if_branch.evaluate(environment)
+                } else if let Some(else_branch) = else_branch {
+                    else_branch.evaluate(environment)
+                } else {
+                    Ok(Value::Nil)
+                }
             }
             Stmt::Declare(var, expr) => {
                 let value = expr.evaluate(environment)?;
