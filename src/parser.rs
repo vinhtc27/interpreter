@@ -99,10 +99,10 @@ impl<'a> Parser<'a> {
         } else {
             Some(self.parse_statement()?)
         };
-        let increment = if !self.check(&TokenType::RightParen) {
-            Some(self.parse_statement()?)
-        } else {
+        let increment = if self.match_tokens(&[TokenType::RightParen]) {
             None
+        } else {
+            Some(self.parse_statement()?)
         };
         self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
         let body = self.parse_statement()?;
