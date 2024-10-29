@@ -41,6 +41,8 @@ impl<'a> Parser<'a> {
             self.block_statement()
         } else if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
+        } else if self.match_tokens(&[TokenType::While]) {
+            self.while_statement()
         } else if self.match_tokens(&[TokenType::If]) {
             self.if_statement()
         } else if self.match_tokens(&[TokenType::Var]) {
@@ -67,6 +69,14 @@ impl<'a> Parser<'a> {
             self.consume(TokenType::SemiColon, "")?;
         }
         Ok(Stmt::Print(Box::new(stmt)))
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt, ()> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
+        let condition = self.parse_statement()?;
+        self.consume(TokenType::RightParen, "Expect ')' after while condition.")?;
+        let body = self.parse_statement()?;
+        Ok(Stmt::While(Box::new(condition), Box::new(body)))
     }
 
     fn if_statement(&mut self) -> Result<Stmt, ()> {

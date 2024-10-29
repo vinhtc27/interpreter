@@ -169,17 +169,14 @@ impl Expr {
                 let left = left.evaluate(environment.clone())?;
                 match operator.token_type {
                     TokenType::Or => {
-                        if matches!(
-                            left,
-                            Value::Boolean(true) | Value::Number(_) | Value::String(_)
-                        ) {
+                        if let Value::Boolean(true) | Value::Number(_) | Value::String(_) = left {
                             return Ok(left);
                         } else {
                             return right.evaluate(environment);
                         }
                     }
                     TokenType::And => {
-                        if matches!(left, Value::Boolean(false) | Value::Nil) {
+                        if let Value::Boolean(false) | Value::Nil = left {
                             return Ok(left);
                         } else {
                             return right.evaluate(environment);
@@ -187,6 +184,7 @@ impl Expr {
                     }
                     _ => {}
                 }
+
                 let right = right.evaluate(environment.clone())?;
                 match (&operator.token_type, &left, &right) {
                     (TokenType::Or, left, right) => match (left, right) {
@@ -298,6 +296,7 @@ impl Expr {
 pub enum Stmt {
     Block(Vec<Stmt>),
     Print(Box<Stmt>),
+    While(Box<Stmt>, Box<Stmt>),
     If(Box<Stmt>, Box<Stmt>, Option<Box<Stmt>>),
     Declare(String, Box<Stmt>),
     Assign(String, Box<Stmt>),
@@ -316,6 +315,7 @@ impl Display for Stmt {
                 Ok(())
             }
             Stmt::Print(expr) => write!(f, "print {}", expr),
+            Stmt::While(condition, body) => write!(f, "while {} {}", condition, body),
             Stmt::If(condition, if_branch, else_branch) => {
                 write!(f, "if {} {}", condition, if_branch).and_then(|_| {
                     if let Some(else_branch) = else_branch {
@@ -356,6 +356,17 @@ impl Stmt {
             Stmt::Print(statement) => {
                 let value = statement.evaluate(environment)?;
                 println!("{}", value);
+                Ok(Value::Nil)
+            }
+            Stmt::While(condition, body) => {
+                while let Ok(result) = condition.evaluate(environment.clone()) {
+                    match result {
+                        Value::Boolean(true) | Value::Number(_) | Value::String(_) => {
+                            body.evaluate(environment.clone())?;
+                        }
+                        _ => break,
+                    }
+                }
                 Ok(Value::Nil)
             }
             Stmt::If(condition, if_branch, else_branch) => {
