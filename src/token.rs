@@ -169,6 +169,16 @@ impl Expr {
                 let left = left.evaluate(environment.clone())?;
                 let right = right.evaluate(environment)?;
                 match (&operator.token_type, left, right) {
+                    (TokenType::Or, Value::Boolean(l), Value::Boolean(r)) => {
+                        Ok(Value::Boolean(l || r))
+                    }
+                    (TokenType::Or, Value::Number(_) | Value::String(_), _) => {
+                        Ok(Value::Boolean(true))
+                    }
+                    (TokenType::Or, _, Value::Number(_) | Value::String(_)) => {
+                        Ok(Value::Boolean(true))
+                    }
+                    (TokenType::Or, _, _) => Ok(Value::Boolean(false)),
                     (TokenType::Plus, Value::Number(l), Value::Number(r)) => {
                         Ok(Value::Number(l + r))
                     }
