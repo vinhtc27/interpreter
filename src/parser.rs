@@ -43,6 +43,8 @@ impl<'a> Parser<'a> {
             self.print_statement()
         } else if self.match_tokens(&[TokenType::While]) {
             self.while_statement()
+        } else if self.match_tokens(&[TokenType::For]) {
+            self.for_statement()
         } else if self.match_tokens(&[TokenType::If]) {
             self.if_statement()
         } else if self.match_tokens(&[TokenType::Var]) {
@@ -74,9 +76,42 @@ impl<'a> Parser<'a> {
     fn while_statement(&mut self) -> Result<Stmt, ()> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'while'.")?;
         let condition = self.parse_statement()?;
-        self.consume(TokenType::RightParen, "Expect ')' after while condition.")?;
+        self.consume(TokenType::RightParen, "Expect ')' after condition.")?;
+
         let body = self.parse_statement()?;
         Ok(Stmt::While(Box::new(condition), Box::new(body)))
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt, ()> {
+        self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+        let initializer = if self.match_tokens(&[TokenType::SemiColon]) {
+            None
+        } else if self.match_tokens(&[TokenType::Var]) {
+            Some(self.declare_statement()?)
+        } else if self.match_tokens(&[TokenType::Identifier]) {
+            Some(self.assign_statement()?)
+        } else {
+            self.error(self.line(), "Expect variable declaration or assignment.");
+            return Err(());
+        };
+        let condition = if self.match_tokens(&[TokenType::SemiColon]) {
+            None
+        } else {
+            Some(self.parse_statement()?)
+        };
+        let increment = if !self.check(&TokenType::RightParen) {
+            Some(self.parse_statement()?)
+        } else {
+            None
+        };
+        self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+        let body = self.parse_statement()?;
+        Ok(Stmt::For(
+            initializer.map(Box::new),
+            condition.map(Box::new),
+            increment.map(Box::new),
+            Box::new(body),
+        ))
     }
 
     fn if_statement(&mut self) -> Result<Stmt, ()> {

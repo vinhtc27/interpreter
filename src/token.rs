@@ -297,6 +297,12 @@ pub enum Stmt {
     Block(Vec<Stmt>),
     Print(Box<Stmt>),
     While(Box<Stmt>, Box<Stmt>),
+    For(
+        Option<Box<Stmt>>,
+        Option<Box<Stmt>>,
+        Option<Box<Stmt>>,
+        Box<Stmt>,
+    ),
     If(Box<Stmt>, Box<Stmt>, Option<Box<Stmt>>),
     Declare(String, Box<Stmt>),
     Assign(String, Box<Stmt>),
@@ -315,7 +321,24 @@ impl Display for Stmt {
                 Ok(())
             }
             Stmt::Print(expr) => write!(f, "print {}", expr),
-            Stmt::While(condition, body) => write!(f, "while {} {}", condition, body),
+            Stmt::While(condition, body) => {
+                write!(f, "while {} {}", condition, body)
+            }
+            Stmt::For(init, condition, increment, body) => {
+                write!(f, "for (")?;
+                if let Some(init) = init {
+                    write!(f, "{}", init)?;
+                }
+                write!(f, ";")?;
+                if let Some(condition) = condition {
+                    write!(f, "{}", condition)?;
+                }
+                write!(f, ";")?;
+                if let Some(increment) = increment {
+                    write!(f, "{}", increment)?;
+                }
+                write!(f, ") {}", body)
+            }
             Stmt::If(condition, if_branch, else_branch) => {
                 write!(f, "if {} {}", condition, if_branch).and_then(|_| {
                     if let Some(else_branch) = else_branch {
@@ -347,9 +370,8 @@ impl Stmt {
     pub fn evaluate(&self, environment: Arc<RwLock<Env>>) -> Result<Value, ExitCode> {
         match self {
             Stmt::Block(statements) => {
-                let block_environment = Env::with_enclosing(environment);
                 for stmt in statements {
-                    stmt.evaluate(block_environment.clone())?;
+                    stmt.evaluate(environment.clone())?;
                 }
                 Ok(Value::Nil)
             }
@@ -359,12 +381,32 @@ impl Stmt {
                 Ok(Value::Nil)
             }
             Stmt::While(condition, body) => {
-                while let Ok(result) = condition.evaluate(environment.clone()) {
-                    match result {
-                        Value::Boolean(true) | Value::Number(_) | Value::String(_) => {
+                while let Ok(Value::Boolean(true)) = condition.evaluate(environment.clone()) {
+                    body.evaluate(environment.clone())?;
+                }
+                Ok(Value::Nil)
+            }
+            Stmt::For(init, condition, increment, body) => {
+                if let Some(init) = init {
+                    init.evaluate(environment.clone())?;
+                }
+
+                match condition {
+                    Some(condition) => {
+                        while let Ok(Value::Boolean(true)) = condition.evaluate(environment.clone())
+                        {
                             body.evaluate(environment.clone())?;
+                            if let Some(increment) = increment {
+                                increment.evaluate(environment.clone())?;
+                            }
                         }
-                        _ => break,
+                    }
+                    None => {
+                        while let Ok(_) = body.evaluate(environment.clone()) {
+                            if let Some(increment) = increment {
+                                increment.evaluate(environment.clone())?;
+                            }
+                        }
                     }
                 }
                 Ok(Value::Nil)
