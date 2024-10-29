@@ -389,26 +389,24 @@ impl Stmt {
                 Ok(Value::Nil)
             }
             Stmt::For(init, condition, increment, body) => {
-                let for_environment = Env::with_enclosing(environment);
                 if let Some(init) = init {
-                    init.evaluate(for_environment.clone())?;
+                    init.evaluate(environment.clone())?;
                 }
 
                 match condition {
                     Some(condition) => {
-                        while let Ok(Value::Boolean(true)) =
-                            condition.evaluate(for_environment.clone())
+                        while let Ok(Value::Boolean(true)) = condition.evaluate(environment.clone())
                         {
-                            body.evaluate(for_environment.clone())?;
+                            body.evaluate(environment.clone())?;
                             if let Some(increment) = increment {
-                                increment.evaluate(for_environment.clone())?;
+                                increment.evaluate(environment.clone())?;
                             }
                         }
                     }
                     None => {
-                        while let Ok(_) = body.evaluate(for_environment.clone()) {
+                        while let Ok(_) = body.evaluate(environment.clone()) {
                             if let Some(increment) = increment {
-                                increment.evaluate(for_environment.clone())?;
+                                increment.evaluate(environment.clone())?;
                             }
                         }
                     }
