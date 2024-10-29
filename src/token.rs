@@ -265,13 +265,16 @@ impl Expr {
     }
 }
 
+#[derive(Clone)]
 pub enum Stmt {
+    Block(Vec<Stmt>),
+    Or(Vec<Stmt>),
+    Group(Box<Stmt>),
     Print(Box<Stmt>),
     If(Box<Stmt>, Box<Stmt>, Option<Box<Stmt>>),
     Declare(String, Box<Stmt>),
     Assign(String, Box<Stmt>),
     Expr(Expr),
-    Block(Vec<Stmt>),
 }
 
 impl Display for Stmt {
@@ -288,14 +291,25 @@ impl Display for Stmt {
                 })
             }
             Stmt::Declare(var, expr) => write!(f, "var {} = {}", var, expr),
-            Stmt::Assign(vars, expr) => write!(f, "{} = {}", vars, expr),
+            Stmt::Assign(var, expr) => write!(f, "{} = {}", var, expr),
             Stmt::Expr(expr) => write!(f, "{}", expr),
             Stmt::Block(stmts) => {
                 for stmt in stmts {
-                    writeln!(f, "{}", stmt)?;
+                    writeln!(f, "{{{}}}", stmt)?;
                 }
                 Ok(())
             }
+            Stmt::Or(stmts) => {
+                for (i, stmt) in stmts.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, " or ")?;
+                    }
+                    write!(f, "{}", stmt)?;
+                }
+                writeln!(f)?;
+                Ok(())
+            }
+            Stmt::Group(stmt) => write!(f, "({})", stmt),
         }
     }
 }
@@ -321,8 +335,23 @@ impl Stmt {
                 }
                 Ok(Value::Nil)
             }
-            Stmt::Print(expr) => {
-                let value = expr.evaluate(environment)?;
+            Stmt::Or(statements) => {
+                for stmt in statements {
+                    match stmt.evaluate(environment.clone())? {
+                        Value::Boolean(true) | Value::Number(_) | Value::String(_) => {
+                            return Ok(Value::Nil)
+                        }
+                        Value::Boolean(false) | Value::Nil => {}
+                    }
+                }
+                Ok(Value::Nil)
+            }
+            Stmt::Group(statement) => {
+                let value = statement.evaluate(environment)?;
+                Ok(value)
+            }
+            Stmt::Print(statement) => {
+                let value = statement.evaluate(environment)?;
                 println!("{}", value);
                 Ok(Value::Nil)
             }

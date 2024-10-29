@@ -19,13 +19,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn statements(&self) -> &[Stmt] {
-        &self.stmts
+    pub fn statements(&mut self) -> &mut [Stmt] {
+        &mut self.stmts
     }
 
     pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
             if let Ok(stmt) = self.parse_statement() {
+                if let Stmt::Or(_) = stmt {
+                    self.stmts.pop();
+                }
                 self.stmts.push(stmt);
             }
         }
@@ -39,6 +42,10 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Stmt, ()> {
         if self.match_tokens(&[TokenType::LeftBrace]) {
             self.block_statement()
+        } else if self.match_tokens(&[TokenType::Or]) {
+            self.or_statement()
+        } else if self.match_tokens(&[TokenType::LeftParen]) {
+            self.group_statement()
         } else if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
         } else if self.match_tokens(&[TokenType::If]) {
@@ -53,12 +60,35 @@ impl<'a> Parser<'a> {
     }
 
     fn block_statement(&mut self) -> Result<Stmt, ()> {
-        let mut statements = Vec::new();
+        let mut stmts = vec![];
         while !self.check(&TokenType::RightBrace) && !self.is_eof() {
-            statements.push(self.parse_statement()?);
+            stmts.push(self.parse_statement()?);
         }
         self.consume(TokenType::RightBrace, "Expect '}' .")?;
-        Ok(Stmt::Block(statements))
+        Ok(Stmt::Block(stmts))
+    }
+
+    fn or_statement(&mut self) -> Result<Stmt, ()> {
+        let mut stmts = vec![self
+            .statements()
+            .last()
+            .cloned()
+            .expect("Expect last statement")];
+        while !self.check(&TokenType::Or) && !self.is_eof() {
+            stmts.push(self.parse_statement()?);
+        }
+        self.consume(TokenType::Or, "Expect 'Or' .")?;
+        stmts.push(self.parse_statement()?);
+        if self.peek().token_type == TokenType::SemiColon {
+            self.consume(TokenType::SemiColon, "")?;
+        }
+        Ok(Stmt::Or(stmts))
+    }
+
+    fn group_statement(&mut self) -> Result<Stmt, ()> {
+        let stmt = self.parse_statement()?;
+        self.consume(TokenType::RightParen, "Expect ')' .")?;
+        Ok(Stmt::Group(Box::new(stmt)))
     }
 
     fn print_statement(&mut self) -> Result<Stmt, ()> {
