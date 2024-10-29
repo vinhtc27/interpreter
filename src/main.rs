@@ -79,10 +79,10 @@ fn main() -> ExitCode {
             if let Err(exitcode) = parser.parse() {
                 return exitcode;
             }
-            let mut env = Env::new();
+            let environment = Env::new();
             let statements = parser.statements();
             for statement in statements {
-                if let Err(exitcode) = statement.evaluate(&mut env) {
+                if let Err(exitcode) = statement.evaluate(environment.clone()) {
                     return exitcode;
                 }
             }

@@ -1,4 +1,8 @@
-use std::{fmt::Display, process::ExitCode};
+use std::{
+    fmt::Display,
+    process::ExitCode,
+    sync::{Arc, RwLock},
+};
 
 use crate::env::Env;
 
@@ -159,10 +163,10 @@ impl Display for Value {
 }
 
 impl Expr {
-    pub fn evaluate(&self, environment: &Env) -> Result<Value, ExitCode> {
+    pub fn evaluate(&self, environment: Arc<RwLock<Env>>) -> Result<Value, ExitCode> {
         match self {
             Expr::Binary(left, operator, right) => {
-                let left = left.evaluate(environment)?;
+                let left = left.evaluate(environment.clone())?;
                 let right = right.evaluate(environment)?;
                 match (&operator.token_type, left, right) {
                     (TokenType::Plus, Value::Number(l), Value::Number(r)) => {
@@ -222,7 +226,7 @@ impl Expr {
                 TokenType::True => Ok(Value::Boolean(true)),
                 TokenType::False => Ok(Value::Boolean(false)),
                 TokenType::Nil => Ok(Value::Nil),
-                TokenType::Identifier => environment.get(&token.lexeme),
+                TokenType::Identifier => environment.read().unwrap().get(&token.lexeme),
                 _ => Err(ExitCode::from(65)),
             },
             Expr::Unary(operator, expr) => {
@@ -257,7 +261,7 @@ impl Expr {
 
 pub enum Stmt {
     Print(Box<Stmt>),
-    If(Box<Expr>, Box<Stmt>, Option<Box<Stmt>>),
+    If(Box<Stmt>, Box<Stmt>, Option<Box<Stmt>>),
     Declare(String, Box<Stmt>),
     Assign(String, Box<Stmt>),
     Expr(Expr),
@@ -294,7 +298,7 @@ impl Stmt {
     pub fn evaluate_no_run(&self) -> Result<Value, ExitCode> {
         match self {
             Stmt::Expr(expr) => {
-                let value = expr.evaluate(&Env::new())?;
+                let value = expr.evaluate(Env::new())?;
                 println!("{}", value);
                 Ok(value)
             }
@@ -302,12 +306,12 @@ impl Stmt {
         }
     }
 
-    pub fn evaluate(&self, environment: &mut Env) -> Result<Value, ExitCode> {
+    pub fn evaluate(&self, environment: Arc<RwLock<Env>>) -> Result<Value, ExitCode> {
         match self {
             Stmt::Block(statements) => {
-                let mut block_env = Env::with_enclosing(environment.clone());
+                let block_environment = Env::with_enclosing(environment);
                 for stmt in statements {
-                    stmt.evaluate(&mut block_env)?;
+                    stmt.evaluate(block_environment.clone())?;
                 }
                 Ok(Value::Nil)
             }
@@ -317,23 +321,27 @@ impl Stmt {
                 Ok(Value::Nil)
             }
             Stmt::If(condition, if_branch, else_branch) => {
-                let condition = condition.evaluate(environment)?;
-                if let Value::Boolean(true) = condition {
-                    if_branch.evaluate(environment)
-                } else if let Some(else_branch) = else_branch {
-                    else_branch.evaluate(environment)
-                } else {
-                    Ok(Value::Nil)
+                match condition.evaluate(environment.clone())? {
+                    Value::Boolean(true) | Value::Number(_) | Value::String(_) => {
+                        if_branch.evaluate(environment)
+                    }
+                    Value::Boolean(false) | Value::Nil => {
+                        if let Some(else_branch) = else_branch {
+                            else_branch.evaluate(environment)
+                        } else {
+                            Ok(Value::Nil)
+                        }
+                    }
                 }
             }
             Stmt::Declare(var, expr) => {
-                let value = expr.evaluate(environment)?;
-                environment.define(var.clone(), value);
+                let value = expr.evaluate(environment.clone())?;
+                environment.write().unwrap().define(var.clone(), value);
                 Ok(Value::Nil)
             }
             Stmt::Assign(var, expr) => {
-                let value = expr.evaluate(environment)?;
-                environment.assign(var, value.clone())?;
+                let value = expr.evaluate(environment.clone())?;
+                environment.write().unwrap().assign(var, value.clone())?;
                 Ok(value)
             }
             Stmt::Expr(expr) => expr.evaluate(environment),

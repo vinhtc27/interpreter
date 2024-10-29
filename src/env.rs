@@ -1,26 +1,30 @@
-use std::{collections::HashMap, process::ExitCode};
+use std::{
+    collections::HashMap,
+    process::ExitCode,
+    sync::{Arc, RwLock},
+};
 
 use crate::token::Value;
 
 #[derive(Debug, Clone)]
 pub struct Env {
     values: HashMap<String, Value>,
-    enclosing: Option<Box<Env>>,
+    enclosing: Option<Arc<RwLock<Env>>>,
 }
 
 impl Env {
-    pub fn new() -> Self {
-        Env {
+    pub fn new() -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Env {
             values: HashMap::new(),
             enclosing: None,
-        }
+        }))
     }
 
-    pub fn with_enclosing(enclosing: Env) -> Self {
-        Env {
+    pub fn with_enclosing(enclosing: Arc<RwLock<Env>>) -> Arc<RwLock<Self>> {
+        Arc::new(RwLock::new(Self {
             values: HashMap::new(),
-            enclosing: Some(Box::new(enclosing)),
-        }
+            enclosing: Some(enclosing),
+        }))
     }
 
     pub fn define(&mut self, name: String, value: Value) {
@@ -32,7 +36,7 @@ impl Env {
             self.values.insert(name.to_string(), value);
             Ok(())
         } else if let Some(ref mut enclosing) = self.enclosing {
-            enclosing.assign(name, value)
+            enclosing.write().unwrap().assign(name, value)
         } else {
             eprintln!("Undefined variable '{}'.", name);
             return Err(ExitCode::from(70));
@@ -43,7 +47,7 @@ impl Env {
         if let Some(value) = self.values.get(name) {
             Ok(value.clone())
         } else if let Some(ref enclosing) = self.enclosing {
-            enclosing.get(name)
+            enclosing.read().unwrap().get(name)
         } else {
             eprintln!("Undefined variable '{}'.", name);
             return Err(ExitCode::from(70));
