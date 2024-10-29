@@ -134,7 +134,7 @@ impl Display for Expr {
             }
             Expr::Literal(token) => match &token.token_type {
                 TokenType::String(s) => write!(f, "{}", s),
-                TokenType::Number(n) => write!(f, "{}", n),
+                TokenType::Number(n) => write!(f, "{:?}", n),
                 _ => write!(f, "{}", token.lexeme),
             },
             Expr::Unary(operator, expr) => write!(f, "({} {})", operator.lexeme, expr),
@@ -154,7 +154,7 @@ pub enum Value {
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Value::Number(n) => write!(f, "{:?}", n),
+            Value::Number(n) => write!(f, "{}", n),
             Value::Boolean(b) => write!(f, "{}", b),
             Value::String(s) => write!(f, "{}", s),
             Value::Nil => write!(f, "nil"),
