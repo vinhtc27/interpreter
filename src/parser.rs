@@ -161,8 +161,8 @@ impl<'a> Parser<'a> {
 
         while self.match_tokens(&[TokenType::Or]) {
             let operator = self.previous();
-            let left = self.and()?;
-            expr = Expr::Binary(Box::new(left), operator, Box::new(expr));
+            let right = self.or()?;
+            expr = Expr::Binary(Box::new(expr), operator, Box::new(right))
         }
 
         Ok(expr)

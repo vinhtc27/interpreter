@@ -167,17 +167,33 @@ impl Expr {
         match self {
             Expr::Binary(left, operator, right) => {
                 let left = left.evaluate(environment.clone())?;
+                match operator.token_type {
+                    TokenType::Or => {
+                        if matches!(
+                            left,
+                            Value::Boolean(true) | Value::Number(_) | Value::String(_)
+                        ) {
+                            return Ok(left);
+                        } else {
+                            return right.evaluate(environment);
+                        }
+                    }
+                    TokenType::And => {
+                        if matches!(left, Value::Boolean(false) | Value::Nil) {
+                            return Ok(left);
+                        } else {
+                            return right.evaluate(environment);
+                        }
+                    }
+                    _ => {}
+                }
                 let right = right.evaluate(environment.clone())?;
                 match (&operator.token_type, &left, &right) {
                     (TokenType::Or, left, right) => match (left, right) {
+                        (Value::Boolean(false) | Value::Nil, _) => Ok(right.clone()),
                         (Value::Boolean(true) | Value::Number(_) | Value::String(_), _) => {
                             Ok(left.clone())
                         }
-                        (_, Value::Boolean(true) | Value::Number(_) | Value::String(_)) => {
-                            Ok(right.clone())
-                        }
-                        (_, Value::Nil) => Ok(Value::Boolean(false)),
-                        _ => Ok(Value::Boolean(false)),
                     },
                     (TokenType::Plus, Value::Number(left), Value::Number(right)) => {
                         Ok(Value::Number(left + right))
