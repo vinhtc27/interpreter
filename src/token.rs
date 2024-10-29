@@ -382,9 +382,8 @@ impl Stmt {
                 Ok(Value::Nil)
             }
             Stmt::While(condition, body) => {
-                let while_environment = Env::with_enclosing(environment);
-                while let Ok(Value::Boolean(true)) = condition.evaluate(while_environment.clone()) {
-                    body.evaluate(while_environment.clone())?;
+                while let Ok(Value::Boolean(true)) = condition.evaluate(environment.clone()) {
+                    body.evaluate(environment.clone())?;
                 }
                 Ok(Value::Nil)
             }
