@@ -26,9 +26,6 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
             if let Ok(stmt) = self.parse_statement() {
-                if let Stmt::Or(_) = stmt {
-                    self.stmts.pop();
-                }
                 self.stmts.push(stmt);
             }
         }
@@ -42,8 +39,6 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Stmt, ()> {
         if self.match_tokens(&[TokenType::LeftBrace]) {
             self.block_statement()
-        } else if self.match_tokens(&[TokenType::Or]) {
-            self.or_statement()
         } else if self.match_tokens(&[TokenType::Print]) {
             self.print_statement()
         } else if self.match_tokens(&[TokenType::If]) {
@@ -64,23 +59,6 @@ impl<'a> Parser<'a> {
         }
         self.consume(TokenType::RightBrace, "Expect '}' .")?;
         Ok(Stmt::Block(stmts))
-    }
-
-    fn or_statement(&mut self) -> Result<Stmt, ()> {
-        let mut stmts = vec![self
-            .statements()
-            .last()
-            .cloned()
-            .expect("Expect last statement")];
-        while !self.check(&TokenType::Or) && !self.is_eof() {
-            stmts.push(self.parse_statement()?);
-        }
-        self.consume(TokenType::Or, "Expect 'Or' .")?;
-        stmts.push(self.parse_statement()?);
-        if self.peek().token_type == TokenType::SemiColon {
-            self.consume(TokenType::SemiColon, "")?;
-        }
-        Ok(Stmt::Or(stmts))
     }
 
     fn print_statement(&mut self) -> Result<Stmt, ()> {
@@ -299,13 +277,13 @@ impl<'a> Parser<'a> {
         }
 
         if self.match_tokens(&[TokenType::LeftParen]) {
-            let stmt = self.expression_statement()?;
+            let stmt = self.parse_statement()?;
             self.consume(TokenType::RightParen, "Unmatched parentheses.")?;
             return Ok(Expr::Group(Box::new(stmt)));
         }
 
         if self.match_tokens(&[TokenType::LeftBrace]) {
-            let stmt = self.expression_statement()?;
+            let stmt = self.parse_statement()?;
             self.consume(TokenType::RightBrace, "Unmatched brace.")?;
             return Ok(Expr::Group(Box::new(stmt)));
         }

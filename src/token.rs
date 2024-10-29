@@ -165,8 +165,8 @@ impl Display for Value {
 impl Expr {
     pub fn evaluate(&self, environment: Arc<RwLock<Env>>) -> Result<Value, ExitCode> {
         match self {
-            Expr::Binary(left_side, operator, right) => {
-                let left = left_side.evaluate(environment.clone())?;
+            Expr::Binary(left, operator, right) => {
+                let left = left.evaluate(environment.clone())?;
                 let right = right.evaluate(environment.clone())?;
                 match (&operator.token_type, &left, &right) {
                     (TokenType::Or, Value::Boolean(l), Value::Boolean(r)) => {
@@ -277,7 +277,6 @@ impl Expr {
 #[derive(Debug, Clone)]
 pub enum Stmt {
     Block(Vec<Stmt>),
-    Or(Vec<Stmt>),
     Print(Box<Stmt>),
     If(Box<Stmt>, Box<Stmt>, Option<Box<Stmt>>),
     Declare(String, Box<Stmt>),
@@ -294,16 +293,6 @@ impl Display for Stmt {
                     writeln!(f, "   {}", stmt)?;
                 }
                 writeln!(f, "}}")?;
-                Ok(())
-            }
-            Stmt::Or(stmts) => {
-                for (i, stmt) in stmts.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, " or ")?;
-                    }
-                    write!(f, "{}", stmt)?;
-                }
-                writeln!(f)?;
                 Ok(())
             }
             Stmt::Print(expr) => write!(f, "print {}", expr),
@@ -341,17 +330,6 @@ impl Stmt {
                 let block_environment = Env::with_enclosing(environment);
                 for stmt in statements {
                     stmt.evaluate(block_environment.clone())?;
-                }
-                Ok(Value::Nil)
-            }
-            Stmt::Or(statements) => {
-                for stmt in statements {
-                    match stmt.evaluate(environment.clone())? {
-                        Value::Boolean(true) | Value::Number(_) | Value::String(_) => {
-                            return Ok(Value::Nil)
-                        }
-                        Value::Boolean(false) | Value::Nil => {}
-                    }
                 }
                 Ok(Value::Nil)
             }
