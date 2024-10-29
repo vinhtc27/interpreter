@@ -123,6 +123,7 @@ pub enum Expr {
     Binary(Box<Expr>, Token, Box<Expr>),
     Literal(Token),
     Unary(Token, Box<Expr>),
+    Group(Box<Stmt>),
 }
 
 impl Display for Expr {
@@ -137,6 +138,7 @@ impl Display for Expr {
                 _ => write!(f, "{}", token.lexeme),
             },
             Expr::Unary(operator, expr) => write!(f, "({} {})", operator.lexeme, expr),
+            Expr::Group(stmt) => write!(f, "(group {})", stmt),
         }
     }
 }
@@ -226,6 +228,7 @@ impl Expr {
                     }
                 }
             }
+            Expr::Group(stmt) => stmt.evaluate(environment),
             Expr::Literal(token) => match &token.token_type {
                 TokenType::Number(n) => Ok(Value::Number(*n)),
                 TokenType::String(s) => Ok(Value::String(s.clone())),
@@ -271,10 +274,9 @@ impl Expr {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum Stmt {
     Block(Vec<Stmt>),
-    Group(Box<Stmt>),
     Or(Vec<Stmt>),
     Print(Box<Stmt>),
     If(Box<Stmt>, Box<Stmt>, Option<Box<Stmt>>),
@@ -287,14 +289,13 @@ impl Display for Stmt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Stmt::Block(stmts) => {
-                writeln!(f, "{{ ")?;
+                writeln!(f, "{{")?;
                 for stmt in stmts {
-                    writeln!(f, "{}", stmt)?;
+                    writeln!(f, "   {}", stmt)?;
                 }
                 writeln!(f, "}}")?;
                 Ok(())
             }
-            Stmt::Group(stmt) => write!(f, "(group {})", stmt),
             Stmt::Or(stmts) => {
                 for (i, stmt) in stmts.iter().enumerate() {
                     if i > 0 {
@@ -343,7 +344,6 @@ impl Stmt {
                 }
                 Ok(Value::Nil)
             }
-            Stmt::Group(statement) => statement.evaluate(environment),
             Stmt::Or(statements) => {
                 for stmt in statements {
                     match stmt.evaluate(environment.clone())? {

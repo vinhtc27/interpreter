@@ -26,7 +26,6 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
             if let Ok(stmt) = self.parse_statement() {
-                println!("{}", stmt);
                 if let Stmt::Or(_) = stmt {
                     self.stmts.pop();
                 }
@@ -43,8 +42,6 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Stmt, ()> {
         if self.match_tokens(&[TokenType::LeftBrace]) {
             self.block_statement()
-        } else if self.match_tokens(&[TokenType::LeftParen]) {
-            self.group_statement()
         } else if self.match_tokens(&[TokenType::Or]) {
             self.or_statement()
         } else if self.match_tokens(&[TokenType::Print]) {
@@ -69,11 +66,6 @@ impl<'a> Parser<'a> {
         Ok(Stmt::Block(stmts))
     }
 
-    fn group_statement(&mut self) -> Result<Stmt, ()> {
-        let stmt = self.parse_statement()?;
-        self.consume(TokenType::RightParen, "Expect ')' after expression.")?;
-        Ok(Stmt::Group(Box::new(stmt)))
-    }
     fn or_statement(&mut self) -> Result<Stmt, ()> {
         let mut stmts = vec![self
             .statements()
@@ -304,6 +296,18 @@ impl<'a> Parser<'a> {
                     line: self.previous().line,
                 }));
             }
+        }
+
+        if self.match_tokens(&[TokenType::LeftParen]) {
+            let stmt = self.expression_statement()?;
+            self.consume(TokenType::RightParen, "Unmatched parentheses.")?;
+            return Ok(Expr::Group(Box::new(stmt)));
+        }
+
+        if self.match_tokens(&[TokenType::LeftBrace]) {
+            let stmt = self.expression_statement()?;
+            self.consume(TokenType::RightBrace, "Unmatched brace.")?;
+            return Ok(Expr::Group(Box::new(stmt)));
         }
 
         if self.match_tokens(&[
