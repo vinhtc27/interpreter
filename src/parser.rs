@@ -30,7 +30,7 @@ impl<'a> Parser<'a> {
             }
         }
         if self.reporter.had_error {
-            Err(ExitCode::from(0))
+            Err(ExitCode::from(65))
         } else {
             Ok(())
         }
