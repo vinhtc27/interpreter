@@ -6,7 +6,7 @@ pub struct Parser<'a> {
     tokens: &'a [Token],
     stmts: Vec<Stmt>,
     current: usize,
-    error: bool,
+    reporter: ErrorReporter,
 }
 
 impl<'a> Parser<'a> {
@@ -15,7 +15,7 @@ impl<'a> Parser<'a> {
             tokens,
             stmts: vec![],
             current: 0,
-            error: false,
+            reporter: ErrorReporter::new(),
         }
     }
 
@@ -29,7 +29,7 @@ impl<'a> Parser<'a> {
                 self.stmts.push(stmt);
             }
         }
-        if self.error {
+        if self.reporter.had_error {
             Err(ExitCode::from(65))
         } else {
             Ok(())
@@ -91,8 +91,7 @@ impl<'a> Parser<'a> {
         } else if self.match_tokens(&[TokenType::Identifier]) {
             Some(self.assign_statement()?)
         } else {
-            self.error(self.line(), "Expect variable declaration or assignment.");
-            return Err(());
+            Some(self.parse_statement()?)
         };
         let condition = if self.match_tokens(&[TokenType::SemiColon]) {
             None
@@ -133,12 +132,27 @@ impl<'a> Parser<'a> {
     }
 
     fn declare_statement(&mut self) -> Result<Stmt, ()> {
+        if !self.check(&TokenType::Identifier) {
+            let token = self.previous();
+            self.reporter
+                .error(token.line, &token.lexeme, "Expect expression.");
+            return Err(());
+        }
+
         let var = self.consume(TokenType::Identifier, "Expect variable name.")?;
         let stmt = if self.match_tokens(&[TokenType::Equal]) {
             self.parse_statement()?
         } else {
+            let token = self.peek();
+            if token.token_type == TokenType::SemiColon {
+                let var_token = &self.tokens[self.current - 2];
+                self.reporter
+                    .error(var_token.line, "var", "Expect expression.");
+                return Err(());
+            }
             self.expression_statement()?
         };
+
         if self.peek().token_type == TokenType::SemiColon {
             self.consume(TokenType::SemiColon, "")?;
         }
@@ -336,8 +350,9 @@ impl<'a> Parser<'a> {
             return Ok(Expr::Literal(self.previous()));
         }
 
-        self.advance();
-        self.error(self.line(), "Expect expression.");
+        let token = self.advance();
+        self.reporter
+            .error(token.line, &token.lexeme, "Expect expression.");
         Err(())
     }
 
@@ -359,25 +374,36 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn line(&self) -> usize {
-        self.peek().line
-    }
-
     fn consume(&mut self, token_type: TokenType, message: &str) -> Result<Token, ()> {
         if self.check(&token_type) {
             Ok(self.advance())
         } else {
-            self.error(self.line(), message);
+            let token = self.advance();
+            self.reporter.error(token.line, &token.lexeme, message);
             Err(())
         }
     }
 
-    fn error(&mut self, line: usize, message: &str) {
-        eprintln!("[line {}] Error: {}", line, message);
-        self.error = true;
-    }
-
     fn previous(&self) -> Token {
         self.tokens[self.current - 1].clone()
+    }
+}
+
+pub struct ErrorReporter {
+    had_error: bool,
+}
+
+impl ErrorReporter {
+    pub fn new() -> Self {
+        Self { had_error: false }
+    }
+
+    pub fn error(&mut self, line: usize, token: &str, message: &str) {
+        self.report(line, token, message);
+        self.had_error = true;
+    }
+
+    fn report(&self, line: usize, token: &str, message: &str) {
+        eprintln!("[line {}] Error at '{}': {}", line, token, message);
     }
 }
