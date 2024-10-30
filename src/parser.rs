@@ -61,12 +61,12 @@ impl<'a> Parser<'a> {
         while !self.check(&TokenType::RightBrace) && !self.is_eof() {
             stmts.push(self.parse_statement()?);
         }
-        self.consume(TokenType::RightBrace, "Expect '}' .")?;
 
         if stmts.is_empty() {
             return Err(());
         }
 
+        self.consume(TokenType::RightBrace, "Expect '}' .")?;
         Ok(Stmt::Block(stmts))
     }
 
