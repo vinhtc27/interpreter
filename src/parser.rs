@@ -62,10 +62,6 @@ impl<'a> Parser<'a> {
             stmts.push(self.parse_statement()?);
         }
 
-        if stmts.is_empty() {
-            return Err(());
-        }
-
         self.consume(TokenType::RightBrace, "Expect '}' .")?;
         Ok(Stmt::Block(stmts))
     }
