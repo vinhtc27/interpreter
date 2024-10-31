@@ -98,7 +98,9 @@ impl<'a> Parser<'a> {
 
         if let Some(Stmt::Block(ref stmts)) = initializer {
             if stmts.is_empty() {
-                return Err(());
+                let token = self.previous();
+                self.reporter
+                    .error(token.line, &token.lexeme, "Expect expression.");
             }
         }
 
@@ -110,7 +112,9 @@ impl<'a> Parser<'a> {
 
         if let Some(Stmt::Block(ref stmts)) = condition {
             if stmts.is_empty() {
-                return Err(());
+                let token = self.previous();
+                self.reporter
+                    .error(token.line, &token.lexeme, "Expect expression.");
             }
         }
 
@@ -124,7 +128,9 @@ impl<'a> Parser<'a> {
 
         if let Some(Stmt::Block(ref stmts)) = increment {
             if stmts.is_empty() {
-                return Err(());
+                let token = self.previous();
+                self.reporter
+                    .error(token.line, &token.lexeme, "Expect expression.");
             }
         }
 
