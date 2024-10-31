@@ -135,6 +135,7 @@ impl<'a> Parser<'a> {
         }
 
         let body = self.parse_statement()?;
+
         Ok(Stmt::For(
             initializer.map(Box::new),
             condition.map(Box::new),
@@ -175,15 +176,20 @@ impl<'a> Parser<'a> {
         } else {
             if self.peek().token_type == TokenType::SemiColon {
                 self.consume(TokenType::SemiColon, "")?;
+                return Ok(Stmt::Assign(
+                    var.lexeme,
+                    Box::new(Stmt::Expr(Expr::Literal(Token {
+                        token_type: TokenType::Nil,
+                        lexeme: "nil".to_string(),
+                        line: self.previous().line,
+                    }))),
+                ));
+            } else {
+                let token = self.previous();
+                self.reporter
+                    .error(token.line, &token.lexeme, "Expect expression.");
+                return Err(());
             }
-            return Ok(Stmt::Assign(
-                var.lexeme,
-                Box::new(Stmt::Expr(Expr::Literal(Token {
-                    token_type: TokenType::Nil,
-                    lexeme: "nil".to_string(),
-                    line: self.previous().line,
-                }))),
-            ));
         };
 
         Ok(Stmt::Declare(var.lexeme, Box::new(stmt)))
