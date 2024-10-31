@@ -173,13 +173,6 @@ impl<'a> Parser<'a> {
         let stmt = if self.match_tokens(&[TokenType::Equal]) {
             self.parse_statement()?
         } else {
-            let token = self.peek();
-            if token.token_type == TokenType::SemiColon {
-                let var_token = &self.tokens[self.current - 2];
-                self.reporter
-                    .error(var_token.line, "var", "Expect expression.");
-                return Err(());
-            }
             self.expression_statement()?
         };
 
