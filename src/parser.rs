@@ -62,15 +62,6 @@ impl<'a> Parser<'a> {
             stmts.push(self.parse_statement()?);
         }
 
-        if stmts.is_empty() {
-            println!("Empty block");
-            let token = self.previous();
-            self.reporter
-                .error(token.line, &token.lexeme, "Expect expression.");
-            self.consume(TokenType::RightBrace, "Expect '}' .")?;
-            return Err(());
-        }
-
         self.consume(TokenType::RightBrace, "Expect '}' .")?;
         Ok(Stmt::Block(stmts))
     }
@@ -94,6 +85,7 @@ impl<'a> Parser<'a> {
 
     fn for_statement(&mut self) -> Result<Stmt, ()> {
         self.consume(TokenType::LeftParen, "Expect '(' after 'for'.")?;
+
         let initializer = if self.match_tokens(&[TokenType::SemiColon]) {
             None
         } else if self.match_tokens(&[TokenType::Var]) {
@@ -103,11 +95,25 @@ impl<'a> Parser<'a> {
         } else {
             Some(self.parse_statement()?)
         };
+
+        if let Some(Stmt::Block(ref stmts)) = initializer {
+            if stmts.is_empty() {
+                return Err(());
+            }
+        }
+
         let condition = if self.match_tokens(&[TokenType::SemiColon]) {
             None
         } else {
             Some(self.parse_statement()?)
         };
+
+        if let Some(Stmt::Block(ref stmts)) = condition {
+            if stmts.is_empty() {
+                return Err(());
+            }
+        }
+
         let increment = if self.match_tokens(&[TokenType::RightParen]) {
             None
         } else {
@@ -115,6 +121,13 @@ impl<'a> Parser<'a> {
             self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
             increment
         };
+
+        if let Some(Stmt::Block(ref stmts)) = increment {
+            if stmts.is_empty() {
+                return Err(());
+            }
+        }
+
         let body = self.parse_statement()?;
         Ok(Stmt::For(
             initializer.map(Box::new),
