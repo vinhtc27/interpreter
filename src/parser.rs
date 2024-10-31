@@ -110,7 +110,9 @@ impl<'a> Parser<'a> {
         let increment = if self.match_tokens(&[TokenType::RightParen]) {
             None
         } else {
-            Some(self.parse_statement()?)
+            let increment = Some(self.parse_statement()?);
+            self.consume(TokenType::RightParen, "Expect ')' after for clauses.")?;
+            increment
         };
         let body = self.parse_statement()?;
         Ok(Stmt::For(
