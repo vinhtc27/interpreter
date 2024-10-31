@@ -173,12 +173,19 @@ impl<'a> Parser<'a> {
         let stmt = if self.match_tokens(&[TokenType::Equal]) {
             self.parse_statement()?
         } else {
-            self.expression_statement()?
+            if self.peek().token_type == TokenType::SemiColon {
+                self.consume(TokenType::SemiColon, "")?;
+            }
+            return Ok(Stmt::Assign(
+                var.lexeme,
+                Box::new(Stmt::Expr(Expr::Literal(Token {
+                    token_type: TokenType::Nil,
+                    lexeme: "nil".to_string(),
+                    line: self.previous().line,
+                }))),
+            ));
         };
 
-        if self.peek().token_type == TokenType::SemiColon {
-            self.consume(TokenType::SemiColon, "")?;
-        }
         Ok(Stmt::Declare(var.lexeme, Box::new(stmt)))
     }
 

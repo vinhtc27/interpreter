@@ -35,6 +35,9 @@ impl Env {
         if self.values.contains_key(name) {
             self.values.insert(name.to_string(), value);
             Ok(())
+        } else if value == Value::Nil {
+            self.values.insert(name.to_string(), value);
+            Ok(())
         } else if let Some(ref mut enclosing) = self.enclosing {
             enclosing.write().unwrap().assign(name, value)
         } else {
