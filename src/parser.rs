@@ -26,6 +26,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<(), ExitCode> {
         while !self.is_eof() {
             if let Ok(stmt) = self.parse_statement() {
+                println!("{}", stmt);
                 self.stmts.push(stmt);
             }
         }
@@ -60,14 +61,6 @@ impl<'a> Parser<'a> {
         let mut stmts = vec![];
         while !self.check(&TokenType::RightBrace) && !self.is_eof() {
             stmts.push(self.parse_statement()?);
-        }
-
-        if stmts.is_empty() {
-            let token = self.previous();
-            self.reporter
-                .error(token.line, &token.lexeme, "Expect expression.");
-            self.consume(TokenType::RightBrace, "Expect '}' .")?;
-            return Err(());
         }
 
         self.consume(TokenType::RightBrace, "Expect '}' .")?;
