@@ -62,6 +62,15 @@ impl<'a> Parser<'a> {
             stmts.push(self.parse_statement()?);
         }
 
+        if stmts.is_empty() {
+            println!("Empty block");
+            let token = self.previous();
+            self.reporter
+                .error(token.line, &token.lexeme, "Expect expression.");
+            self.consume(TokenType::RightBrace, "Expect '}' .")?;
+            return Err(());
+        }
+
         self.consume(TokenType::RightBrace, "Expect '}' .")?;
         Ok(Stmt::Block(stmts))
     }
